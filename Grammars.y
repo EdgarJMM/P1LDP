@@ -1,6 +1,7 @@
 {
 module Grammars where
 import Lexer (Token(..), lexer)
+import ASA
 }
 
 %name parse
@@ -94,8 +95,8 @@ SASA : int                             { NumS $1 }
     | '(' if0 SASA SASA SASA ')'         { If0 $3 $4 $5 }
 
     | '(' lambda '(' VarList ')' SASA ')'  { LambdaS $4 $6 }
-    | '(' ExprList ')'                { foldl1 AppS ($2 : $3) }
-    | '(' cond ClauseList ElseClause  ')' { Cond $3 $5 }
+    | '(' SASA ExprList ')'                { foldl1 AppS ($2 : $3) }
+    | '(' cond ClauseList ElseClause  ')' { Cond $3 $4 }
 
 -- Definimos nuestras reglas auxiliares para simplificar las reglas con aridad mayor o igual a 2 
 ExprList :
