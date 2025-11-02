@@ -42,9 +42,9 @@ desugar (AddS xs)     = foldl1 Add (map desugar xs)
 desugar (SubS xs)     = foldl1 Sub (map desugar xs)
 desugar (MultS xs)    = foldl1 Mult (map desugar xs)
 desugar (DivS xs)     = foldl1 Div (map desugar xs)
-desugar (EqualsS xs)  = foldl1 Eq (map desugar xs)
 
 -- Comparaciones con aridad mayor o igual a 2
+desugar (EqualsS xs)  = chainComparison Eq xs
 desugar (BiggerS xs)  = chainComparison MayorQue xs
 desugar (SmallerS xs) = chainComparison MenorQue xs
 desugar (BigEq xs)   = chainComparison auxBE xs
