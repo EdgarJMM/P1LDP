@@ -70,8 +70,13 @@ desugar (IfS c t e)    = If (desugar c) (desugar t) (desugar e)
 desugar (If0 c t e)    = If (Eq (desugar c) (Num 0)) (desugar t) (desugar e)
 
 -- Let bindings
-desugar (LetS [Bind x e1] body) =
-  App (Fun [x] (desugar body)) (desugar e1)
+-- Desazucarización de let paralelo
+-- (λx1 x2 ... xn. body) e1 e2 ... en
+desugar (LetS binds body) =
+  let vars  = [x | Bind x _ <- binds]
+      exprs = [e | Bind _ e <- binds]
+      fun   = Fun vars (desugar body)
+  in  foldl App fun (map desugar exprs)
 -- Desazucarización de let secuencial como aplicación lambda anidada
 -- letseq x1 = e1; x2 = e2; ...; xn = en in body
 -- ≡ ((λx1. (λx2. ... (λxn. body) e_n ...) e2) e1)
