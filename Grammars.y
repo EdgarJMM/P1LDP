@@ -69,8 +69,8 @@ SASA : int                             { NumS $1 }
     | '(' '=' ExprList ')'            { EqualsS $3 }
     | '(' '<' ExprList ')'            { SmallerS $3 }
     | '(' '>' ExprList ')'            { BiggerS $3 }
-    | '(' '<=' ExprList ')'           { BigEq $3 }
-    | '(' '>=' ExprList ')'           { SmallEq $3 }
+    | '(' '>=' ExprList ')'           { BigEq $3 }
+    | '(' '<=' ExprList ')'           { SmallEq $3 }
     | '(' '!=' ExprList ')'           { NotEq $3 }
 
     -- Unarias
@@ -82,8 +82,8 @@ SASA : int                             { NumS $1 }
     | '(' fst SASA ')'                 { FstS $3 }
     | '(' snd SASA ')'                 { SndS $3 }
     | '[' ListElems ']'               { List $2 }
-    | '(' head SASA ')'                { Head $3 }
-    | '(' tail SASA ')'                { Tail $3 }
+    | '(' head SASA ')'                { HeadS $3 }
+    | '(' tail SASA ')'                { TailS $3 }
 
     | '(' SASA ',' SASA ')'             { PairS $2 $4 }
     | '(' let BindList SASA ')'        { LetS $3 $4 }

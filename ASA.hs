@@ -27,8 +27,8 @@ data SASA
   | FstS SASA
   | SndS SASA
   | List LSASA
-  | Head SASA
-  | Tail SASA
+  | HeadS SASA
+  | TailS SASA
   | PairS SASA SASA
   | LetS [Bind] SASA
   | LetSeq [Bind] SASA
