@@ -1,4 +1,4 @@
-module ASA where
+module SASA where
 
 -- Definimos el tipo de listas de SASA
 type LSASA = [SASA]

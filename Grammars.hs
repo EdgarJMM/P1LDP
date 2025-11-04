@@ -10,7 +10,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 module Grammars where
 import Lexer (Token(..), lexer)
-import ASA
+import SASA
 import qualified Control.Monad as Happy_Prelude
 import qualified Data.Bool as Happy_Prelude
 import qualified Data.Function as Happy_Prelude
@@ -28,7 +28,7 @@ import qualified GHC.Exts as Happy_GHC_Exts
 import Control.Applicative(Applicative(..))
 import Control.Monad (ap)
 
--- parser produced by Happy Version 2.1.7
+-- parser produced by Happy Version 2.1.6
 
 data HappyAbsSyn t5 t6 t7 t8 t9 t10 t11 t12 t13
         = HappyTerminal (Token)
@@ -640,7 +640,7 @@ happyAbort :: () => [(Token)] -> (HappyIdentity a)
 happyAbort = Happy_Prelude.error "Called abort handler in non-resumptive parser"
 
 parse tks = happyRunIdentity happySomeParser where
- happySomeParser = happyThen (happyDoParse 0# tks) (\x -> case x of {HappyAbsSyn5 z -> happyReturn z; _other -> notHappyAtAll })
+ happySomeParser = happyThen (happyParse 0# tks) (\x -> case x of {HappyAbsSyn5 z -> happyReturn z; _other -> notHappyAtAll })
 
 happySeq = happyDontSeq
 
@@ -698,7 +698,7 @@ data HappyStk a = HappyStk a (HappyStk a)
 -----------------------------------------------------------------------------
 -- starting the parse
 
-happyDoParse start_state = happyNewToken start_state notHappyAtAll notHappyAtAll
+happyParse start_state = happyNewToken start_state notHappyAtAll notHappyAtAll
 
 -----------------------------------------------------------------------------
 -- Accepting the parse

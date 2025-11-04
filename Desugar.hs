@@ -1,6 +1,6 @@
 module Desugar where
 
-import ASA  -- Importamos el módulo donde definimos nuestro SASA
+import SASA  -- Importamos el módulo donde definimos nuestro SASA
 import qualified Grammars -- Importamos el módulo Grammars para acceder a sus funiones, tipos o valores
 
 -- Definimos nuestro árbol de sitaxis abstracta con las expresiones núcleo
@@ -17,7 +17,7 @@ data ASA
   | MayorQue ASA ASA
   | Not ASA
   | If ASA ASA ASA
-  | Fun [String] ASA
+  | Fun String ASA
   | App ASA ASA
   | Seq [ASA]
   | Pair ASA ASA
@@ -64,7 +64,7 @@ desugar (List xs)     = foldr Cons Nil (map desugar xs)
 desugar (HeadS e)      = Head (desugar e)
 desugar (TailS e)      = Tail (desugar e)
 -- Desazucarización de funciones, aplicación y condicionales
-desugar (LambdaS ps b) = Fun ps (desugar b)
+desugar (LambdaS ps b) = curryFun ps (desugar b)
 desugar (AppS f a)     = App (desugar f) (desugar a)
 desugar (IfS c t e)    = If (desugar c) (desugar t) (desugar e)
 desugar (If0 c t e)    = If (Eq (desugar c) (Num 0)) (desugar t) (desugar e)
@@ -75,18 +75,18 @@ desugar (If0 c t e)    = If (Eq (desugar c) (Num 0)) (desugar t) (desugar e)
 desugar (LetS binds body) =
   let vars  = [x | Bind x _ <- binds]
       exprs = [e | Bind _ e <- binds]
-      fun   = Fun vars (desugar body)
+      fun   = curryFun vars (desugar body)
   in  foldl App fun (map desugar exprs)
 -- Desazucarización de let secuencial como aplicación lambda anidada
 -- letseq x1 = e1; x2 = e2; ...; xn = en in body
 -- ≡ ((λx1. (λx2. ... (λxn. body) e_n ...) e2) e1)
 desugar (LetSeq [] body) = desugar body
 desugar (LetSeq (Bind x e : bs) body) =
-  App (Fun [x] (desugar (LetSeq bs body))) (desugar e)
+  App (Fun x (desugar (LetSeq bs body))) (desugar e)
   
 desugar (LetRec (Bind f e1) e2) =
-  App (Fun [f] (desugar e2))
-      (App (Id "fix") (Fun [f] (desugar e1)))
+  App (Fun f (desugar e2))
+      (App (Id "fix") (Fun f (desugar e1)))
 
 -- Desazucarización de la condicional
 desugar (Cond clauses (Else e)) =
@@ -118,3 +118,7 @@ chainComparison ctor (x:y:rest) =
       c2 = chainComparison ctor (y:rest)  -- Comparaciones siguientes
   in  If c1 c2 (Boolean False)
 
+-- Función auxiliar que transforma un SASA LambdaS a un ASA Fun currificado
+curryFun :: [String] -> ASA -> ASA
+curryFun [] body     = body
+curryFun (p:ps) body = Fun p (curryFun ps body)

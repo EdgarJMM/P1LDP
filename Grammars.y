@@ -1,7 +1,7 @@
 {
 module Grammars where
 import Lexer (Token(..), lexer)
-import ASA
+import SASA
 }
 
 %name parse
