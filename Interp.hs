@@ -156,10 +156,10 @@ funToClosure ((App (Fun p c) a), env) = ((AppV (Closure p c env)) a, env)      -
 -- Funcion de transición de paso pequeño de App-Arg
 appArg :: ConfigASAV -> ConfigASAV                        
 appArg ((AppV (Closure p c env0) a), env)
-                                    | (isCanon a) == False = 
-                                        let (a', env') = smallStep (a, env)
-                                        in ((AppV (Closure p c env0)) a', env')  -- fix env'
-                                    | otherwise = ((AppV (Closure p c env0)) a, env)
+    | not (isCanon a) =
+      let (aFinal, envFinal) = eval (a, env)
+      in ((AppV (Closure p c env0)) aFinal, envFinal)
+    | otherwise = ((AppV (Closure p c env0)) a, env)
 
 -- Funcion de transición de paso pequeño de una aplicación de closure a su beta reducción
 doClosure :: ConfigASAV -> Config
