@@ -16,7 +16,7 @@ run code = do
         sasa = parse tokens
         asa = desugar sasa
         (valor, _) = evalFinal (asa, [])
-    putStrLn $ "\nResultado → " ++ show valor ++ "\n"
+    putStrLn $ "\n" ++ show valor ++ "\n"
 
 -- Bienvenida del menú interactivo
 main :: IO ()

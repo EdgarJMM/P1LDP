@@ -1,0 +1,2673 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{setspace}
+\usepackage{geometry}
+\usepackage{titlesec}
+
+\titleformat{\paragraph}[block]{\normalsize\bfseries}{}{0pt}{}
+\titlespacing*{\paragraph}{0pt}{8pt plus 2pt minus 1pt}{6pt}
+
+\usepackage{changepage}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\geometry{letterpaper, margin=1in}
+\usepackage{url}
+
+\usepackage{adjustbox}  
+
+\usepackage{amsfonts}   
+
+
+\newcommand{\oneconcl}[1]{\adjustbox{max width=.955\linewidth}{$#1$}}
+
+
+\newcommand{\rulewithtag}[3]{% #1 premisas, #2 consecuente, #3 tag
+  \par\addvspace{6pt}%
+  \noindent\makebox[\linewidth]{%
+    $\dfrac{#1}{\oneconcl{#2}}$\hfill(\text{#3})}%
+}
+
+
+
+
+\setstretch{1.2}
+
+
+\titleformat{\section}{\large\bfseries\centering}{\thesection}{1em}{}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    {\scshape\LARGE Universidad Nacional Autónoma de México \par}
+    \vspace{0.3cm}
+    {\scshape\Large Facultad de Ciencias \par}
+    \vspace{3cm}
+    {\huge\bfseries Lenguajes de Programación \par}
+    \vspace{2cm}
+    {\Large\bfseries Profesor: \par}
+    {\large Manuel Soto Romero \par}
+    \vspace{1cm}
+    {\Large\bfseries Ayudantes de Laboratorio: \par}
+    \begin{spacing}{1.1}
+        \large
+        Manuel Soto Romero \\
+        Diego Méndez Medina \\
+        José Alejandro Pérez Márquez \\
+        Erick Daniel Arroyo Martínez \\
+        Mauro Emiliano Chávez Zamora
+    \end{spacing}
+    \vfill
+    {\Large\bfseries Proyecto 1: \par}
+    {\LARGE MiniLisp \par}
+    \vfill
+    {\large \bfseries Integrantes: \par}
+    \begin{spacing}{1.2}
+        Trejo Maya Diego Alexander \\
+        Hernández Islas Leonardo Daniel \\
+        Carrillo Sánchez Rafael Esteban \\
+        Morales Martínez Edgar Jesús
+    \end{spacing}
+    \vspace{1.5cm}
+    {\large \today \par}
+\end{titlepage}
+
+
+\newpage
+
+\section*{Introducción}
+
+\subsection*{Motivación}
+
+Como parte del curso de \textbf{Lenguajes de Programación}, tras haber revisado la teoría necesaria para comprender la construcción de intérpretes y lenguajes formales, este proyecto busca aplicar de manera práctica los conocimientos adquiridos hasta el momento.  
+El objetivo principal es construir un lenguaje de programación denominado \textbf{MiniLisp}, partiendo de su diseño teórico hasta su implementación funcional.  
+
+A través de este desarrollo se pretende fortalecer la comprensión de los conceptos de \textit{sintaxis}, \textit{semántica}, \textit{azúcar sintáctica}, \textit{bindings}, \textit{evaluación ansiosa (call-by-value)} y su relación directa con la ejecución práctica del lenguaje en \textbf{Haskell}.  
+De esta forma, se integran los aspectos teóricos con la experiencia práctica en el diseño e implementación de lenguajes de programación.
+
+\section*{Objetivos específicos}
+
+\begin{enumerate}
+    \item Desarrollar la sintaxis léxica y libre de contexto del lenguaje \textbf{MiniLisp}, así como su representación en una sintaxis abstracta, incorporando la noción de azúcar sintáctica y su posterior eliminación para obtener un núcleo más simplificado del lenguaje.
+
+    \item Definir la semántica operacional estructural de \textbf{MiniLisp}, especificando tanto los modelos conceptuales basados en máquinas abstractas como sus implementaciones ejecutables en \textbf{Haskell}.
+
+    \item Construir formalmente los ambientes de evaluación y los \textit{bindings} como mecanismos esenciales para garantizar la consistencia semántica y el correcto manejo de los alcances y valores dentro del lenguaje.
+
+    \item Integrar el régimen de evaluación ansiosa (\textit{call-by-value}) mediante una estrategia de paso de parámetros por valor, analizando su influencia en la ejecución de los programas y en el diseño del intérprete.
+
+    \item Implementar el lenguaje \textbf{MiniLisp} de forma funcional en \textbf{Haskell}, mostrando la correspondencia explícita entre las reglas de formalización teórica y su aplicación práctica en la ejecución del lenguaje.
+
+    \item Mostrar, a través del proceso de eliminación del azúcar sintáctica, el tránsito desde la expresividad inicial del lenguaje hacia un núcleo reducido, fortaleciendo así la comprensión del vínculo entre la teoría y la práctica en el diseño de lenguajes de programación.
+\end{enumerate}
+
+
+\newpage
+\section*{Delimitación del proyecto}
+
+\subsection*{Formalización}
+
+\subsubsection*{Sintaxis Concreta}
+Para comenzar a diseñar nuestro lenguaje, primero debemos partir de definir su sintaxis concreta.
+
+La sintaxis concreta de un lenguaje de programación se refiere a la estructura que tiene y que define exactamente cómo se deben escribir los programas en este [10].
+
+La sintaxis concreta se puede definir como un par $(L, G)$ donde [10]:
+\begin{itemize}
+    \item $L$ es la definición léxica representada por el conjunto de expresiones regulares $R$.
+    \item $G$ es la gramática libre de contexto $(N, \Sigma, P, S)$.
+\end{itemize}
+
+\subsubsection*{Sintaxis Léxica}
+Para definir nuestra sintaxis léxica de manera formal nos vamos a apoyar en la teoría de autómatas y lenguajes formales, más específicamente en el uso de expresiones regulares.  
+Para esto \textbf{recapitularemos} qué es formalmente un lenguaje y a qué se refiere el término \textit{token}.
+
+Un \textbf{lenguaje} se puede definir como un subconjunto de $\Sigma^*$, donde $\Sigma$ es un alfabeto, mientras que un \textit{token} es un símbolo abstracto que representa un tipo de unidad léxica. Esto a su vez es el lexema dentro de nuestro lenguaje de programación, es decir, secuencias de caracteres mínimas con algún significado dentro de este, que puede ser representado por expresiones regulares [10].
+
+Una expresión regular es una forma de notación para definir un lenguaje.  
+Podemos definir las expresiones regulares formalmente de la siguiente manera:
+
+Constantes y variables que denotan los lenguajes y tres operadores de operaciones (unión +, punto · y estrella de Kleene *).  
+Describimos las expresiones regulares recursivamente, pues con esta definición no sólo describimos qué son, sino también para cada una de las expresiones $E$ el lenguaje que representa, denotado como $L(E)$ puesto que $E$, estrictamente hablando, es sólo una expresión y no un lenguaje, tenemos que denotarlo por aparte como $L(E)$.
+
+\textbf{Casos base:}  
+La base consiste en tres partes:
+\begin{enumerate}
+    \item La constante $\varepsilon$ y $\emptyset$ son expresiones regulares y denotan el lenguaje entre $\{\varepsilon\}$ y $\emptyset$, respectivamente. Esto es $L(\varepsilon)=\{\varepsilon\}$ y $L(\emptyset)=\emptyset$.
+    \item Si $a$ es un símbolo, entonces $a$ es una expresión regular. Esta expresión denota el lenguaje $L(a)=\{a\}$, donde $a$ se refiere a sí misma.
+    \item Una variable, normalmente en mayúsculas y en itálica $L$, es una variable que representa cualquier lenguaje.
+\end{enumerate}
+
+\textbf{Inducción:}  
+Hay cuatro partes de pasos inductivos, uno por cada uno de los operadores y uno por la introducción a los paréntesis:
+\begin{enumerate}
+    \item Si $E$ y $F$ son expresiones regulares, entonces $E + F$ es una expresión regular que denota la unión de los lenguajes $L(E)$ y $L(F)$.  
+    Esto es $L(E + F) = L(E) \cup L(F)$.
+    \item Si $E$ y $F$ son expresiones regulares, entonces $EF$ es una expresión regular que denota la concatenación de los lenguajes $L(E)$ y $L(F)$.  
+    Esto es $L(EF) = L(E)L(F)$.
+    \item Si $E$ es una expresión regular, entonces $E^*$ es una expresión regular, denotando la cerradura del lenguaje $L(E)$.  
+    Que es $L(E^*) = (L(E))^*$.
+    \item Si $E$ es una expresión regular, entonces $(E)$, $E$ entre paréntesis, es una expresión regular que denota el mismo lenguaje $E$.  
+    Formalmente: $L((E)) = L(E)$.
+\end{enumerate}
+[2]
+
+\subsubsection*{Sintaxis Léxica de MiniLisp}
+Una vez definida qué es la sintaxis léxica formalmente, vamos a utilizarla para definir nuestra sintaxis léxica dentro de nuestro lenguaje de programación \textbf{MiniLisp}.  
+Empezaremos por definir nuestro alfabeto $\Sigma$, que se va a conformar por nuestros símbolos:
+
+\[
+\Sigma = \{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -, +, (, ), *, a...z, A...Z\}
+\]
+
+Donde $a...z$ se refiere al alfabeto castellano en minúsculas y $A...Z$ al alfabeto castellano en mayúsculas.
+
+Con este alfabeto nos basta para poder representar la sintaxis léxica de la base otorgada para nuestro lenguaje \textbf{MiniLisp}.  
+Así, pasaremos a representar nuestros \textit{tokens} dentro del lenguaje con expresiones regulares, las cuales tendrán un identificador del lado derecho que nos servirá para darnos una idea de lo que representan, seguidos por una flecha y con la expresión regular correspondiente hasta el lado derecho. 
+
+\newpage
+
+\begin{center}
+\begin{minipage}{0.7\textwidth}
+\begin{flushleft}
+\textit{letra} $\rightarrow$ A $\mid$ B $\mid$ \dots $\mid$ Z $\mid$ a $\mid$ b $\mid$ \dots $\mid$ z \\[6pt]
+\textit{dígito} $\rightarrow$ 0 $\mid$ 1 $\mid$ \dots $\mid$ 9 \\[6pt]
+Z $\rightarrow$ 1 $\mid$ \dots $\mid$ 9 \\[6pt]
+\textit{id} $\rightarrow$ \textit{letra} (\textit{letra} $\mid$ \textit{dígito})$^{*}$ \\[6pt]
+\textit{dígitos} $\rightarrow$ Z\,\textit{dígito}$^{*}$ + - Z\,\textit{dígito}$^{*}$ \\[6pt]
+\textit{fracción} $\rightarrow$ .\,\textit{dígito}$^{*}$ $\mid$ $\varepsilon$ \\[6pt]
+\textit{número} $\rightarrow$ \textit{dígitos fracción} \\[6pt]
+\textit{if} $\rightarrow$ \texttt{if} \\[6pt]
+\textit{then} $\rightarrow$ \texttt{then} \\[6pt]
+\textit{else} $\rightarrow$ \texttt{else}
+\end{flushleft}
+\end{minipage}
+\end{center}
+
+\noindent[3]
+
+
+\subsubsection*{Implementación del lexer usando ALEX}
+
+Una vez formalizado en papel nuestro analizador léxico, podemos empezar a crear nuestro lexer en forma de código.  
+Para esto se nos habilitó el uso de una herramienta llamada \textbf{ALEX}.
+
+ALEX es una herramienta que ayuda a generar analizadores léxicos (\textit{lexers} o \textit{scanners}) en \textbf{Haskell}.  
+El analizador léxico implementa una descripción de los tokens para ser reconocidos como expresiones regulares \noindent[5].
+
+Podemos instalar ALEX como instalamos cualquier otro paquete en Haskell, esto es:
+
+\begin{center}
+\begin{minipage}{0.4\textwidth}
+\begin{verbatim}
+cabal install alex
+\end{verbatim}
+
+\hspace{2.0cm}o
+
+\begin{verbatim}
+stack install alex
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+
+mediante \texttt{cabal} y \texttt{stack} respectivamente.
+
+Dentro de nuestro archivo \texttt{.x}, las llaves \texttt{\{\}} sirven para insertar \textbf{“scrap code”}, donde básicamente indicamos que queremos poner código en Haskell.  
+El scrap que ponemos hasta el inicio del archivo por lo general se usa para indicar el módulo de nuestro archivo Haskell, por lo que lo vamos a estar usando mucho dentro de nuestro código.
+
+El comando \texttt{\%wrapper "basic"} controla cómo se llama la función principal del escáner, qué tipo de entrada consume y qué tipo de salida devuelve, esto es así porque cuando ALEX genera el analizador léxico, no solo produce la tabla de transiciones y las funciones de escaneo, sino que también necesita envolver el código desde una interfaz que lo haga usable desde Haskell.
+
+El \textbf{“wrapper” básico} (el que estamos utilizando) genera un escáner que toma como entrada un \textit{string} de Haskell, lo “tokeniza” y produce como salida una lista de tokens.
+
+\noindent
+Usamos \texttt{\$digito = 0-9} y \texttt{\$alfabeto = [a-zA-Z]} para indicar los dígitos y el alfabeto que queremos manejar en nuestro lexer. Cabe mencionar que estas son llamadas “variables de patrón” y se basan en la notación de las expresiones regulares que definimos formalmente, de igual manera al poner un + al final de estas nos referimos que esto es válido si se reconoce una o más expresiones con la misma forma.
+
+Con código hexadecimal definimos otra variable patrón para los espacios en blanco más comunes que queremos que se eviten cuando leamos nuestra cadena, esto es: \texttt{\$white = [\textbackslash x20\textbackslash x09\textbackslash x0A\textbackslash x0D\textbackslash x0C\textbackslash x0B]} para \texttt{\textbackslash x20 = ' '} (space), \texttt{\textbackslash x09 = tab}, \texttt{\textbackslash x0A = LF}, \texttt{\textbackslash x0D = CR}, \texttt{\textbackslash x0C = FF}, \texttt{\textbackslash x0B = VT}.
+
+La línea \texttt{tokens : -} finaliza la definición de las macros y empieza la definición del scanner.
+
+Ahora pasamos a especificar las definiciones de nuestros tokens donde usamos el formato \texttt{regexp \{code\}} donde regexp indica que si \texttt{<regexp>} (patrones) coincide con la entrada entonces devuelve \texttt{<code>} (acción Haskell) que a su vez puede ser reemplazado por \texttt{;} indicando que el token de la entrada de caracteres se debe ignorar.
+
+Como ya tenemos nuestras variables patrón definidas podemos usarlas para empezar a indicar nuestros tokens, los espacios en blanco los ignoramos y empezamos a definir el nombre de cada uno de nuestros tokens. En la parte \texttt{regexp} cuando utilizamos \textbackslash seguido de un carácter queremos indicar que este no es un metacaracter especial sin embargo cuando lo usamos dentro del lado derecho \texttt{\{code\}} ya sea como \texttt{\_ -> Token o \textbackslash s -> Token} la primera forma indica una lambda dentro de Haskell que usa \_ como comodín para el argumento indicando que no le importa el valor mientras que la segunda usa s para indicar un argumento llamado s que es una subcadena reconocida dentro del patrón, en nuestro caso al argumento le llamaremos \texttt{lexema}, esto nos servirá para ahorrarnos la definición de cada uno de nuestros símbolos pues ya tendrán su identificador y no tendremos que definir manualmente uno por uno.
+
+Para agregar \textbf{comentarios} a nuestro lenguaje utilizaremos el símbolo \texttt{\~{}\~{}} pues la doble virgulilla no nos parece muy usada y queríamos darle algo de personalidad a nuestro lenguaje. Para indicar que todo lo que se encuentre al lado derecho de nuestro comentario sin importar el carácter o si tiene cero o más repeticiones lo ignore, ponemos el comando \texttt{"\~{}\~{.}*"} ; donde \texttt{.} indica que no importa el carácter y \texttt{*} hace la función de la estrella de Kleene en las expresiones regulares.
+
+Al final del documento creamos un apartado entre llaves \texttt{\{\ldots\}} para declarar el tipo de los tokens y crear una función \texttt{main} para poder probarlos. Alex nos provee de una función integrada para invocar nuestro escáner: \texttt{alexScanTokens :: String -> [Token]}.
+
+Para evitar extendernos innecesariamente en el documento, los tokens que extienden el lenguaje \texttt{MiniLisp} que se definen posteriormente en el documento omitiremos escribirlos textualmente, sin embargo, todos siguen la misma estructura que definimos anteriormente, por lo que no habría un gran cambio en el archivo más que la adición de estos con el mismo formato. Adicionalmente el archivo se encuentra comentado en cada una de sus partes.
+
+Para ejecutar el archivo individualmente y comprobar que la tokenización funciona tenemos que escribir la siguiente línea:
+
+\begin{center}
+\texttt{alex Lexer.x}
+\end{center}
+
+Si se generó el archivo \texttt{.hs} sin ningún error podemos pasar ahora sí a probarlo en nuestro intérprete con el siguiente comando:
+
+\begin{center}
+\texttt{ghci Lexer.hs}
+\end{center}
+
+
+Para probarlo tenemos que escribir \texttt{lexer} y entre comillas la cadena que queramos tokenizar. Ejemplo:
+
+\begin{center}
+\texttt{lexer "1+2"}
+\end{center}
+
+Que nos generará la siguiente salida:
+
+\begin{center}
+\textbf{[TokenNum 1, TokenSuma, TokenNum 2]}
+\end{center}
+
+\subsection*{Sintaxis Libre de Contexto de \textit{MiniLisp}}
+
+Esta se refiere a la estructura de un \textbf{LDP} en la que las reglas de formación de sus secuencias se pueden escribir mediante una gramática libre de contexto o \textbf{GLC} por sus siglas en inglés.
+
+\subsubsection*{Gramática formal:}
+
+Una gramática formal se define formalmente como [9]:
+
+Un 4-dúplo \textbf{G = (N, T, P, S)}, donde:
+
+\begin{itemize}
+  \item \textit{N} es un conjunto finito de símbolos \textit{no terminales}.
+  \item \textit{T} es un conjunto de \textit{símbolos terminales} (N $\cap$ T = $\emptyset$)
+  \item \textit{P} es un conjunto finito de \textit{producciones}.
+  \item \textit{S} es el símbolo inicial tal que S $\notin$ (N $\cup$ T). La restricción no es de uso generalizado, depende de las formas de reglas que se utilicen.
+\end{itemize}
+
+Las producciones en \textit{P} son parejas ordenadas $(\alpha, \beta)$ con $\alpha = \gamma A \delta$ en la cual $\beta$, $\gamma$ y $\delta$ son posiblemente vacías en $(N \cup T)^*$ y $A \in N$ o bien $A = S$. Denotamos a la pareja $(\alpha, \beta)$ como $\alpha \rightarrow \beta$.
+
+\subsubsection*{Gramática libre de contexto:}
+
+Ahora, una gramática \textbf{G = (N, T, P, S)} es libre de contexto si sus producciones son de alguna de las siguientes formas [9]:
+
+\begin{itemize}
+  \item S $\rightarrow$ $\varepsilon$
+  \item A $\rightarrow$ a
+\end{itemize}
+
+Con $S$ y $A \in N$, $S$ es el símbolo inicial y $|A| \leq |\alpha|$, $\alpha \in (N \cup T)^+$ y si la producción $S \rightarrow \varepsilon$ está en la gramática, $S$ no aparece del lado derecho de ninguna producción.
+
+\subsubsection*{Gramática en forma de Backus–Naur (BNF):}
+
+Para otorgar una manera clara y precisa de definir la sintaxis de los lenguajes de programación, alrededor del año 1960 se introdujo la notación \textbf{BNF (Backus–Naur Form)} para gramáticas libres de contexto [10]. Sus características principales son [11]:
+
+\begin{itemize}
+  \item \textbf{Símbolos no terminales:} Se escriben entre $\langle \rangle$ (ejemplo: $\langle$Expr$\rangle$ o $\langle$Ide$\rangle$).
+  \item \textbf{Reglas de producción:} Se representan igual que en la notación clásica pero se cambia el símbolo $\rightarrow$ por \texttt{::=}.
+  \item \textbf{Uso del operador “|”:} El operador “|” se utiliza para separar las distintas alternativas en las reglas de producción.
+
+\end{itemize}
+
+
+\subsubsection*{Gramática en forma EBNF (Extended Backus Naur Form):}
+
+Debido a las limitaciones de la forma BNF para escribir repeticiones y agrupaciones de forma compacta, a lo largo de varios años se hicieron extensiones a la forma BNF, lo que se convirtió en la forma extendida de Backus Naur, forma que se estandarizó en 1996 por la ISO/IEC 14977 [10].
+
+Los componentes básicos de una gramática en forma EBNF son [10]:
+
+\begin{itemize}
+    \item \textbf{Repetición:} Las secuencias que pueden repetirse cero o más veces se indican usando llaves \texttt{\{ \}}.
+    \item \textbf{Opcionalidad:} Las secuencias opcionales se indican usando corchetes \texttt{[ ]}.
+    \item \textbf{Agrupaciones:} Las agrupaciones de elementos se indican usando paréntesis \texttt{( )}.
+    \item \textbf{Alternativas:} Las alternativas se heredan de BNF mediante el operador \texttt{|}.
+\end{itemize}
+
+\subsubsection*{Gramática a emplear en EBNF:}
+
+Para nuestro proyecto, se utilizará una gramática libre de contexto en forma EBNF, debido a que otorga una manera clara y precisa para nuestra sintaxis y a la vez permite repeticiones y agrupaciones de forma compacta.
+
+Consideramos las siguientes especificaciones dadas:
+
+\begin{itemize}
+    \item Debe haber paréntesis al inicio y al final de cada expresión.
+    \item Se tiene notación prefija.
+\end{itemize}
+
+\subsubsection*{Gramática base:}
+
+\begin{center}
+\begin{minipage}{0.5\textwidth}
+\begin{verbatim}
+Expr ::= Var
+       | Int
+       | Bool
+       | ( + Expr Expr )
+       | ( - Expr Expr )
+       | ( not Expr )
+       | ( let (Var Expr) Expr )
+       | ( letrec (Var Expr) Expr )
+       | ( if0 Expr Expr Expr )
+       | ( lambda (Var) Expr )
+       | ( Expr Expr)
+Var ::= Identificador de variable
+Int ::= Constante entera
+Bool ::= #t | #f
+
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+
+\newpage
+\section*{Implementación de las extensiones:}
+
+\textbf{Extensiones solicitadas:}
+
+\begin{enumerate}
+    \item \textbf{Operadores variádicos.} Los operadores actualmente binarios deben aceptar múltiples argumentos (\textit{aridad} $\geq$ 2).
+    \item \textbf{Operadores aritméticos:} Multiplicación y división. Incorporar \texttt{*} y \texttt{/} con la misma aridad \textit{variádica} anterior así como los operadores \texttt{add1} (de incremento) y \texttt{sub1} (de decremento), \texttt{sqrt} (raíz cuadrada) y \texttt{expt} (potencia).
+    \item \textbf{Predicados sobre enteros:} Igualdad y comparaciones. Incluir \texttt{=}, \texttt{<}, \texttt{>}, \texttt{>=}, \texttt{<=}, \texttt{!=} con soporte variádico.
+    \item \textbf{Pares ordenados y proyecciones:} Añadir la formación de pares \texttt{(e1, e2)} y las proyecciones: \texttt{(fst (1, \#))}, \texttt{(snd (3, 5))}.
+    \item \textbf{Asignaciones locales:} \texttt{let} y \texttt{let*} variádicos. Añadir las construcciones \texttt{let} y \texttt{let*} que permitan realizar asignaciones locales con múltiples variables (\textit{aridad} $\geq$ 1). En el caso de \texttt{let}, todas las asignaciones deben considerarse en paralelo, mientras que en \texttt{let*} deben evaluarse de manera secuencial.
+    \item \textbf{Condicional booleano:} Incorporar la forma \texttt{(if e1 e2 e3)}.
+    \item \textbf{Listas y operaciones básicas:} Extender con sintaxis de listas por corchetes y operaciones \texttt{head}/\texttt{tail}: \texttt{[1, 2, 3, 4]}, \texttt{(head [1, 2, 3, 4])}, \texttt{(tail [3, 5, 6])}, \texttt{[]}.
+    \item \textbf{Condicional por clausulado:} \texttt{cond} con rama \texttt{else}. Añadir la construcción \texttt{cond}, que permita escribir múltiples condiciones de forma ordenada. Cada cláusula debe tener una guarda booleana y una expresión asociada, evaluándose en orden hasta encontrar la primera verdadera. Además, se debe incluir una cláusula final \texttt{else}, cuya guarda se considera siempre verdadera. Especificar en EBNF la notación de las cláusulas.
+    \item \textbf{Funciones anónimas y aplicaciones:} La superficie del lenguaje debe incluir lambdas variádicas de la forma \texttt{(lambda (x1 ... ) Expr)}, permitiendo definir funciones con múltiples parámetros y su aplicación a argumentos.
+\end{enumerate}
+
+\subsubsection*{Gramática en EBNF con las extensiones solicitadas:}
+
+
+
+
+\begin{center}
+\begin{adjustwidth}{-1cm}{-1cm} % agrega margen extra a ambos lados
+\small
+\begin{minipage}{0.85\textwidth}
+\begin{verbatim}
+<Expr> ::= <Var>
+        | <Int>
+        | <Bool>
+        | ( + <Expr> <Expr> { <Expr> } )     … suma con aridad ≥ 2
+        | ( - <Expr> <Expr> { <Expr> } )     … resta con aridad ≥ 2
+        | ( * <Expr> <Expr> { <Expr> } )     … multiplicación con aridad ≥ 2
+        | ( / <Expr> <Expr> { <Expr> } )     … división con aridad ≥ 2
+        | ( add1 <Expr> )                    … incremento de 1
+        | ( sub1 <Expr> )                    … decremento de 1
+        | ( sqrt <Expr> )                    … raíz cuadrada
+        | ( expt <Expr> <Expr> )             … potencia
+        | ( not <Expr> )                     … operación de negación
+        | ( = <Expr> <Expr> { <Expr> } )     … comparación de igualdad
+        | ( < <Expr> <Expr> { <Expr> } )     … comparación de menor
+        | ( > <Expr> <Expr> { <Expr> } )     … comparación de mayor
+        | ( >= <Expr> <Expr> { <Expr> } )    … comparación de mayor igual
+        | ( <= <Expr> <Expr> { <Expr> } )    … comparación de menor igual
+        | ( != <Expr> <Expr> { <Expr> } )    … comparación de no igual
+        | ( <Expr> , <Expr> )                … pares ordenados
+        | ( fst <Expr> )                     … proyección primer elemento
+        | ( snd <Expr> )                     … proyección segundo elemento
+        | ( let <BindLet> { <BindLet> } <Expr> )  … asign. locales (paralelo)
+        | ( let* <BindLet> { <BindLet> } <Expr> ) … asign. locales (sec.)
+        | ( letrec <BindLet> <Expr> )        … let recursivo
+        | ( if <Expr> <Expr> <Expr> )        … condicional si-verdadero
+        | ( if0 <Expr> <Expr> <Expr> )       … condicional si-0
+        | ( lambda ( <Var> { <Var> } ) <Expr> ) … funciones anónimas
+        | ( <Expr> <Expr> { <Expr> } )       … aplicación de función
+        | “[“ “]”                            … lista vacía
+        | “[“ <Expr> { , <Expr> } “]”        … lista con elementos
+        | ( head <Expr> )                    … cabeza de lista
+        | ( tail <Expr> )                    … cola de lista
+        | ( cond <Clause> { <Clause> } “[“ <ElseClause> “]” )
+                                            … condicional por clausulado
+
+<BindLet> ::= ( <Var> <Expr> )               … binding variable
+<Clause> ::= “[“ <Expr> <Expr> “]”           … cláusula guarda booleana
+<ElseClause> ::= “[“ else <Expr> “]”
+<Var> ::= Identificador de variable
+<Int> ::= Constante entera
+<Bool> ::= #t | #f
+\end{verbatim}
+\end{minipage}
+\end{adjustwidth}
+\end{center}
+
+\subsection*{Sintaxis Abstracta (ASA)}
+
+
+\subsection*{Definición formal}
+La sintaxis abstracta representa los constructores de programación mediante árboles donde cada nodo interior representa un operador y sus hijos, a su vez, representan los operandos[3]. A diferencia de los árboles de parsing, en la sintaxis abstracta los nodos interiores representan construcciones de programación en lugar de no terminales. Esta representación se define mediante tipos de datos algebraicos en Haskell, que capturan la estructura esencial del lenguaje.
+
+
+\subsection*{Definición Azúcar Sintáctica}
+Decimos que azúcar sintáctica se refiere a aquellas construcciones que se traducen manera sistemática a construcciones más básicas del lenguaje durante el procesamiento [12].
+
+\subsection*{Expresiones del SASA}
+A las expresiones de la sintaxis abstracta que son azúcar sintáctica de otras expresiones, les diremos SASA (Sugar Árbol Sintaxis Abstracta).
+
+\subsection*{Expresiones del LASA}
+Para las expresiones con aridad >= 2 o que reciban varios parámetros o argumentos, se define el tipo LSASA (List Sugar Árbol Sintaxis Abstracta), representando una lista de SASA.
+
+
+
+
+
+
+% ==== Bloque SASA/LSASA 
+
+\paragraph{LSASA de la lista vacía}
+\[
+\dfrac{
+}{
+\texttt{nil}\;\text{LSASA}
+}
+\]
+
+\paragraph{LSASA de la lista con elementos}
+\[
+\dfrac{
+x\;\text{SASA}\quad xs\;\text{LSASA}
+}{
+\texttt{(x:xs)}\;\text{LSASA}
+}
+\]
+
+\paragraph{SASA de $\langle Var \rangle$}
+\[
+\dfrac{
+i : \text{String}
+}{
+\text{IDS}(i)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de $\langle Int \rangle$}
+\[
+\dfrac{
+n \in \mathbb{Z}
+}{
+\text{NumS}(n)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de $\langle Bool \rangle$}
+\[
+\dfrac{
+b \in \{\text{True}, \text{False}\}
+}{
+\text{BooleanS}(b)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA del vacío}
+\[
+\dfrac{
+}{
+\text{NilS}\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de un \emph{binding} de una variable con un valor}
+\[
+\dfrac{
+i : \text{String}\quad v\;\text{SASA}
+}{
+\text{BindLet}(i, v)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de una cláusula de una guarda booleana con una expresión}
+\[
+\dfrac{
+i\;\text{SASA}\quad d\;\text{SASA}
+}{
+\text{Clause}(i, d)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de una cláusula \textit{else}}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{ElseClause}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la suma variádica}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{AddS}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la resta variádica}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{SubS}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la multiplicación variádica}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{MultS}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la división variádica}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{DivS}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la potencia}
+\[
+\dfrac{
+b\;\text{SASA}\quad e\;\text{SASA}
+}{
+\text{Expt}(b, e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA del incremento de 1}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{Add1}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA del decremento de 1}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{Sub1}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la raíz cuadrada}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{SqrtS}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la operación de negación}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{NotS}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la comparación de igualdad variádica}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{Equals}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la comparación de “menor que” de enteros variádica}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{SmallerS}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la comparación de “mayor que” de enteros variádica}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{BiggerS}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la comparación de “mayor igual” de enteros}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{BigEq}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la comparación de “menor igual” de enteros}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{SmallEq}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la comparación de “no igual” de enteros}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{NotEq}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de los pares}
+\[
+\dfrac{
+l\;\text{SASA}\quad r\;\text{SASA}
+}{
+\text{PairS}(l, r)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la proyección del primer elemento}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{FstS}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la proyección del segundo elemento}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{SndS}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la asignación local con múltiples variables en paralelo}
+\[
+\dfrac{
+as\;\text{LSASA}\quad e\;\text{SASA}
+}{
+\text{LetS}(as, e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la asignación local con múltiples variables secuencial}
+\[
+\dfrac{
+as\;\text{LSASA}\quad e\;\text{SASA}
+}{
+\text{LetSeq}(as, e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la asignación de variables recursiva}
+\[
+\dfrac{
+bdlet\;\text{SASA}\quad e\;\text{SASA}
+}{
+\text{LetRec}(bdlet, e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la condicional “si verdadero entonces”}
+\[
+\dfrac{
+c\;\text{SASA}\quad t\;\text{SASA}\quad e\;\text{SASA}
+}{
+\text{IfS}(c, t, e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la condicional “si 0 entonces”}
+\[
+\dfrac{
+c\;\text{SASA}\quad t\;\text{SASA}\quad e\;\text{SASA}
+}{
+\text{If0}(c, t, e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de las funciones anónimas con varios parámetros}
+\[
+\dfrac{
+p_i : \text{String}\quad i \in \mathbb{N}\quad c\;\text{SASA}
+}{
+\text{LambdaS}(p_0, p_1, \dots, p_n, c)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de las aplicaciones de función con varios argumentos}
+\[
+\dfrac{
+f\;\text{SASA}\quad as\;\text{LSASA}
+}{
+\text{AppS}(f, as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la lista con elementos}
+\[
+\dfrac{
+as\;\text{LSASA}
+}{
+\text{List}(as)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la cabeza de una lista}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{Head}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de la cola de una lista}
+\[
+\dfrac{
+e\;\text{SASA}
+}{
+\text{Tail}(e)\;\text{SASA}
+}
+\]
+
+\paragraph{SASA de condición por clausulado}
+\[
+\dfrac{
+as\;\text{LSASA}\quad e\;\text{SASA}
+}{
+\text{Cond}(as, e)\;\text{SASA}
+}
+\]
+% ==== Fin del bloque ====
+
+
+
+
+\subsection*{Expresiones del ASA:}
+
+
+A las expresiones de la sintaxis abstracta que no sean azúcar sintáctica de otras expresiones (i.e. que pertenecen al lenguaje core o núcleo) les diremos ASA (Árbol Sintaxis Abstracta).
+
+
+\paragraph{ASA de $\langle Var \rangle$}
+\[
+\dfrac{
+  i : \text{String}
+}{
+  \text{ID}(i)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de $\langle Int \rangle$}
+\[
+\dfrac{
+  n \in \mathbb{Z}
+}{
+  \text{Num}(n)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de $\langle Bool \rangle$}
+\[
+\dfrac{
+  b \in \{\text{True}, \text{False}\}
+}{
+  \text{Boolean}(b)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la suma binaria}
+\[
+\dfrac{
+  i\;\text{ASA}\quad d\;\text{ASA}
+}{
+  \text{Add}(i,d)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la resta binaria}
+\[
+\dfrac{
+  i\;\text{ASA}\quad d\;\text{ASA}
+}{
+  \text{Sub}(i,d)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la multiplicación binaria}
+\[
+\dfrac{
+  i\;\text{ASA}\quad d\;\text{ASA}
+}{
+  \text{Mult}(i,d)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la división binaria}
+\[
+\dfrac{
+  i\;\text{ASA}\quad d\;\text{ASA}
+}{
+  \text{Div}(i,d)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la raíz cuadrada}
+\[
+\dfrac{
+  e\;\text{ASA}
+}{
+  \text{Sqrt}(e)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la potencia}
+\[
+\dfrac{
+  b\;\text{ASA}\quad e\;\text{ASA}
+}{
+  \text{Expt}(b,e)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la operación de negación}
+\[
+\dfrac{
+  b\;\text{ASA}
+}{
+  \text{Not}(b)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA del vacío}
+\[
+\dfrac{
+}{
+  \text{Nil}\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la condicional “si verdadero entonces”}
+\[
+\dfrac{
+  c\;\text{ASA}\quad t\;\text{ASA}\quad e\;\text{ASA}
+}{
+  \text{If}(c,t,e)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la igual de enteros binaria}
+\[
+\dfrac{
+  i\;\text{ASA}\quad d\;\text{ASA}
+}{
+  \text{Eq}(i,d)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la comparación de “menor que” de enteros variádica}
+\[
+\dfrac{
+  i\;\text{ASA}\quad d\;\text{ASA}
+}{
+  \text{MenorQue}(i,d)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la comparación de “mayor que” de ent.. variádica}
+\[
+\dfrac{
+  i\;\text{ASA}\quad d\;\text{ASA}
+}{
+  \text{MayorQue}(i,d)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de los pares}
+\[
+\dfrac{
+  l\;\text{ASA}\quad r\;\text{ASA}
+}{
+  \text{Pair}(l,r)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la proyección del primer elemento}
+\[
+\dfrac{
+  e\;\text{ASA}
+}{
+  \text{Fst}(e)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la proyección del segundo elemento}
+\[
+\dfrac{
+  e\;\text{ASA}
+}{
+  \text{Snd}(e)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la función anónima}
+\[
+\dfrac{
+  p : \text{String}\qquad c\;\text{ASA}
+}{
+  \text{Lambda}(p,c)\;\text{ASA}
+}
+\]
+
+\paragraph{ASA de la aplicación de función}
+\[
+\dfrac{
+  f\;\text{ASA}\qquad a\;\text{ASA}
+}{
+  \text{App}(f,a)\;\text{ASA}
+}
+\]
+
+
+
+
+
+
+\subsection*{Implementación de la gramática usando HAPPY}
+
+Una vez formalizado en papel nuestra gramática podemos empezar a utilizar Happy, que es la herramienta que se nos habilitó para empezar a implementar la gramática que queremos pasar en nuestro analizador \textbf{gramático}.
+
+Happy es una herramienta que ayuda a generar la gramática que queremos analizar en nuestro analizador \textbf{gramático} generando un módulo compilable de Haskell. El analizador \textbf{gramático}. Un analizador gramático (también conocido como parser) toma los tokens generados por nuestro analizador léxico y verifica que la cadena recibida sea una cadena que se reconozca dentro del lenguaje [3].
+
+Podemos instalar Happy como instalamos cualquier otro paquete en Haskell, esto es:
+
+\begin{center}
+\begin{minipage}{0.4\textwidth}
+\begin{verbatim}
+cabal install alex
+\end{verbatim}
+
+\hspace{2.0cm}o
+
+\begin{verbatim}
+stack install alex
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+
+mediante cabal y stack respectivamente.
+
+Dentro de nuestro archivo \texttt{.y} las llaves \texttt{\{\}} sirven para insertar \textit{scrap code}, donde literalmente indicamos que queremos poner código en Haskell; el scrap que ponemos hasta el inicio del archivo por lo general se usa para indicar el módulo de nuestro archivo Haskell:
+\begin{verbatim}
+{
+module Grammars where
+import Lex (Token(..), lexer)
+}
+\end{verbatim}
+
+\texttt{module Grammars where} define el nombre de nuestro módulo y \texttt{where} indica que el cuerpo del módulo es lo que sigue. \texttt{import Lex (Token(..), lexer)} sirve para exportar el tipo de dato \textit{token} y el tipo de dato \textit{lexer}, como se encuentran dentro de los paréntesis respectivamente.
+
+Otra parte importante de nuestro archivo son las declaraciones:
+\begin{verbatim}
+%name parse
+%tokentype { Token }
+%error { parseError }
+\end{verbatim}
+
+La primera línea declara el nombre de la función \texttt{parser} que Happy va a generar, en este caso \texttt{parse}.  
+La segunda línea declara el tipo de tokens que nuestro parser va a aceptar, tal que el tipo va a ser \texttt{[Token] -> T}, donde \texttt{T} es el tipo de dato que retorna nuestro parser y se determina por las reglas de producción que especificaremos después.  
+La última línea literalmente indica el nombre de la función que nuestro parser va a llamar al momento de que ocurra un error.
+
+La siguiente parte de nuestro archivo se conforma de declarar todos los tokens posibles y se indica su comienzo con la sentencia \texttt{\%token}.  
+Los tokens van a estar definidos del lado izquierdo, mientras que del lado derecho va a servir para indicar el tipo de patrón que sigue el token, por esto el parser espera recibir un flujo de tokens donde va a buscar que coincidan con el patrón dado.  
+Además, el símbolo \texttt{\$\$} servirá para representar el valor de un token.
+
+En la siguiente parte del archivo vamos a especificar nuestras siguientes reglas de producción para la gramática, donde cada regla de producción consiste de un símbolo no terminal en el lado izquierdo seguido por dos puntos más una o más expansiones a la derecha separadas por el símbolo pipe.  
+Cabe recalcar que cada expansión tiene código Haskell asociado a ella.  
+El parser reducirá la cadena de entrada usando las reglas gramaticales que definimos hasta que solo un símbolo permanezca; el valor de este símbolo será el valor de regreso de nuestro parser.
+
+Para definir estas reglas vamos a basarnos en nuestra forma EBNF que definimos en el documento, por lo que tendremos que además definir las reglas auxiliares como \texttt{BindLet}, \texttt{Clause} y \texttt{ElseClause}.  
+Además, para facilitar en nuestra forma EBNF utilizamos los símbolos \texttt{\{\}} con el fin de simplificar la notación para expresiones con aridad mayor o igual a 2.  
+Sin embargo, nosotros tendremos que definir funciones auxiliares que representen este símbolo, como por ejemplo: \texttt{ExprList}, \texttt{BindList}, \texttt{BarList}, \texttt{ClauseList}, etc.  
+También utilizaremos la misma estrategia para las listas de elementos, de tal forma que para cada una de éstas se puede definir como su expresión más simple seguida de otra lista, es decir, de alguna forma utilizaremos asociatividad en pares a la izquierda y se aceptarán recursivamente.
+
+Finalmente, agregamos otro apartado con scrap code donde definimos nuestro árbol de sintaxis abstracta (ASA) esto con el fin de definir la semántica que utilizaremos después, pues Happy solo se encarga de reconocer la sintaxis.
+
+Para ejecutar el archivo y comprobar que funciona hay que primero haber generado nuestro analizador léxico con \textbf{Alex}, de tal forma que nos genere un archivo \texttt{Lexer.hs}.  
+Así ya podemos importar a nuestro archivo de Happy el módulo con los tokens definidos que necesitamos. Para ejecutarlo de forma manual tenemos que generar el archivo Grammars.hs a través de happy con el siguiente comando:
+
+\begin{center}
+\begin{minipage}{0.4\textwidth}
+\begin{verbatim}
+happy Grammars.y
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+
+
+Si se generó el archivo \texttt{.hs} sin ningún error, podemos pasar ahora sí a probarlo en nuestro intérprete con el siguiente comando:
+
+
+\begin{center}
+\begin{minipage}{0.4\textwidth}
+\begin{verbatim}
+ghci Grammars.hs
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+Siempre y cuando se encuentre en la misma ruta nuestro archivo \texttt{Lexer.hs}.  
+Finalmente, para probarlo tenemos que escribir \texttt{parse} y entre paréntesis \texttt{lexer} y entre comillas una expresión que acepte nuestro lenguaje, pues de lo contrario mandará error.  
+Ejemplo:
+
+\begin{center}
+\begin{minipage}{0.4\textwidth}
+\begin{verbatim}
+parse (lexer "(+ 1 2)")
+\end{verbatim}
+\end{minipage}
+\end{center}
+Que nos generará la siguiente salida:
+
+\vspace{0.3em}
+\begin{center}
+\textbf{AddS (NumS 1) (NumS 2)}
+\end{center}
+\vspace{0.8em}
+
+Otro ejemplo sería:
+
+\begin{center}
+\begin{minipage}{0.4\textwidth}
+\begin{verbatim}
+parse (lexer "(lambda (x y z) (+ 1 5 8))")
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+
+
+Que nos generará la siguiente salida:
+
+\shorthandoff{"}
+\begin{center}
+\textbf{LambdaS ["x","y","z"] (AddS (AddS (NumS 1) (NumS 5)) (NumS 8))}
+\end{center}
+\shorthandon{"}
+
+
+
+
+% ========= Eliminación de Azúcar sintáctica =========
+\textbf{Eliminación de Azúcar sintáctica:}
+
+La eliminación de azúcar sintáctica es un proceso fundamental en el diseño de lenguajes de programación que permite distinguir entre una sintaxis de superficie (rica y expresiva) y un núcleo mínimo (simple y fundamental) [7,1]. Según Felleisen et al. [2], este proceso establece una correspondencia sistemática entre construcciones convenientes y formas más primitivas, preservando el poder expresivo mientras se simplifica la semántica.
+
+\textbf{Convención notacional:}
+
+Utilizaremos la siguiente notación para las reglas de desazucarización:
+
+\begin{center}
+\[
+\dfrac{SUPERFICIE}{NUCLEO} (nombre-regla)
+\]
+\end{center}
+
+
+Donde:
+
+\textbf{SUPERFICIE:} Expresión en la sintaxis extendida
+
+\textbf{NÚCLEO:} Traducción equivalente en el núcleo mínimo
+
+\textbf{NOMBRE-REGLA:} Identificador de la regla\\
+
+
+
+Formalmente, para la desazucarización queremos definir una función que preserve el significado de nuestras expresiones y que a su vez traduzca semánticamente la azúcar sintáctica a las expresiones más simples, es decir, las primitivas del núcleo del lenguaje.
+
+Anteriormente definimos nuestro árbol de sintaxis azucarado (también conocido como de alto nivel), donde representamos el lenguaje tal como lo escribiría el usuario; por eso, en lugar de definir la estructura como ASA, lo definimos como \emph{SASA}. Al implementar el desugar tenemos que pasar de nuestro árbol de sintaxis concreta a un árbol de sintaxis abstracta; para esto vamos a definir una función por inducción estructural
+\[
+  D : \mathrm{SASA} \to \mathrm{ASA}
+\]
+tal que, para cualquier expresión \(e \in \mathrm{SASA}\), al aplicar la función se preserva el significado. Para esto definimos el núcleo funcional puro con todas las estructuras sin azúcar sintáctica, de modo que:
+\begin{itemize}
+  \item “\(\to\)” representa la regla de desazucarización, que va de la sintaxis azucarada al núcleo.
+  \item \(x_i\) representan las subexpresiones de la lista; al pasar a \(x_i'\) se desazucariza.
+\end{itemize}
+
+
+
+
+% ========= Expresiones directas =========
+\textbf{Expresiones directas:}
+
+\noindent\texttt{------------------------------}\hfill (DES-NUM)\\[-2pt]
+NumS(n) $\Rightarrow$ Num(n)
+
+\vspace{1.2ex}
+\noindent\texttt{------------------------------}\hfill (DES-BOOL)\\[-2pt]
+BoolS(b) $\Rightarrow$ Boolean(b)
+
+\vspace{1.2ex}
+\noindent\texttt{------------------------------}\hfill (DES-ID)\\[-2pt]
+IdS(x) $\Rightarrow$ Id(x)
+
+\vspace{1.2ex}
+\noindent\texttt{------------------------------}\hfill (DES-NIL)\\[-2pt]
+NilS $\Rightarrow$ Nil
+
+
+
+
+
+
+
+
+\subsection*{Reglas inductivas estructurales:}
+
+Usando una notación estándar de reglas inductivas:
+
+Para \(n \ge 2\) y \(i = 1..n\), supongamos \(e_i \Rightarrow e_i'\).
+Entonces:
+
+\[
+\frac{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{AddS}([e_1,\dots,e_n]) \Rightarrow \mathrm{foldl1}\ \mathrm{Add}\ [e_1',\dots,e_n']}
+\quad(\text{DES-ADD-n-left})
+\]
+
+\noindent y expandiendo el \textit{foldl1}:
+
+\[
+\mathrm{AddS}([e_1,\dots,e_n]) \Rightarrow
+\mathrm{Add}(\,\dots\ \mathrm{Add}(\mathrm{Add}(e_1',e_2'),e_3')\ \dots ,\ e_n')
+\]
+
+\[
+\frac{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{SubS}([e_1,\dots,e_n]) \Rightarrow \mathrm{foldl1}\ \mathrm{Sub}\ [e_1',\dots,e_n']}
+\quad(\text{DES-SUB-n-left})
+\]
+
+\noindent y expandiendo el \textit{foldl1}:
+
+\[
+\mathrm{SubS}([e_1,\dots,e_n]) \Rightarrow
+\mathrm{Sub}(\,\dots\ \mathrm{Sub}(\mathrm{Sub}(e_1',e_2'),e_3')\ \dots ,\ e_n')
+\]
+
+\[
+\frac{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{MulS}([e_1,\dots,e_n]) \Rightarrow \mathrm{foldl1}\ \mathrm{Mul}\ [e_1',\dots,e_n']}
+\quad(\text{DES-MUL-n-left})
+\]
+
+\noindent y expandiendo el \textit{foldl1}:
+
+\[
+\mathrm{MulS}([e_1,\dots,e_n]) \Rightarrow
+\mathrm{Mul}(\,\dots\ \mathrm{Mul}(\mathrm{Mul}(e_1',e_2'),e_3')\ \dots ,\ e_n')
+\]
+
+\[
+\frac{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{DivS}([e_1,\dots,e_n]) \Rightarrow \mathrm{foldl1}\ \mathrm{Div}\ [e_1',\dots,e_n']}
+\quad(\text{DES-DIV-n-left})
+\]
+
+\noindent y expandiendo el \textit{foldl1}:
+
+\[
+\mathrm{DivS}([e_1,\dots,e_n]) \Rightarrow
+\mathrm{Div}(\,\dots\ \mathrm{Div}(\mathrm{Div}(e_1',e_2'),e_3')\ \dots ,\ e_n')
+\]
+
+%---------------------------------------------------------------
+\subsection*{Desugar comparaciones:}
+
+\textbf{Reglas auxiliares:}
+
+
+\newcommand{\rulelabel}[1]{%
+  \par\noindent\leavevmode
+  \leaders\hrule height 0.4pt\hfill\ (#1)\par
+}
+
+\textbf{Empty}
+\rulelabel{DES-CHAIN-EMPTY}
+
+BiggerS([]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+SmallerS([]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+BigEq([]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+SmallEq([]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+Eq([]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+NotEq([]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}
+
+\medskip
+
+\textbf{Singleton}
+\rulelabel{DES-CHAIN-SINGLE}
+
+BiggerS([e1]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+SmallerS([e1]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+BigEq([e1]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+SmallEq([e1]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+Eq([e1]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}\\
+NotEq([e1]) \Rightarrow \mathrm{Boolean}\ \mathrm{True}
+%=============================================================================
+
+
+\newcommand{\premiselineoffset}{.38ex} % 
+\newcommand{\premisesonrule}[2]{%
+  \noindent\makebox[\linewidth]{%
+    % 
+    \rlap{\raisebox{-\premiselineoffset}{\rule{\linewidth}{0.4pt}}}%
+    \makebox[0pt][l]{\ #1}%
+    \hfill(#2)}\par\vspace{2pt}%
+}
+
+
+\vspace{1cm} 
+\textbf{Regla: desazucarización binaria con recursividad}
+
+\textit{Chain \(n \ge 2\)}
+
+\premisesonrule{\(e1 \Rightarrow e1' \quad e2 \Rightarrow e2' \quad \dots \quad en \Rightarrow en'\)}{DES-CHAIN-n}
+
+
+\noindent CtorS([e1,\dots,en]) \(\Rightarrow\) If (ctor \(e1'\) \(e2'\)) (If (ctor \(e2'\) \(e3'\)) ( \dots\ (If (ctor \(e_{n-1}'\) \(e_n'\)) (Boolean True) (Boolean False)) \dots ) (Boolean False)) (Boolean False)
+
+\noindent\rule{\linewidth}{0.4pt}
+
+\noindent auxBE a b = If (MayorQue a b) (Boolean True) (Eq a b)
+
+\noindent\rule{\linewidth}{0.4pt}
+
+\noindent auxSE a b = If (MenorQue a b) (Boolean True) (Eq a b)
+
+\noindent\rule{\linewidth}{0.4pt}
+
+\noindent auxNE a b = Not (Eq a b)
+
+
+
+
+
+
+
+
+%---------------------------------------------------------------------------------------------
+%=========================================================================================
+\vspace{1cm} 
+\textbf{Reglas concretas:}
+
+% --- DES-BIGGERS ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{BiggerS}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{MayorQue}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-BIGGERS}
+
+% --- DES-SMALLERS ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{SmallerS}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{MenorQue}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-SMALLERS}
+
+% --- DES-BIGEQ ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{BigEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxBE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-BIGEQ}
+
+% --- DES-SMALLEQ ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{SmallEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxSE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-SMALLEQ}
+
+% --- DES-EQS ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{EqS}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{Eq}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-EQS}
+
+% --- DES-NOTEQ ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{NotEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxNE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-NOTEQ}
+
+
+
+
+
+%========================================================================
+\vspace{1cm} 
+\paragraph{Desazucarizaciones unarias}
+
+
+% --- DES-SMALLEQ ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{SmallEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxSE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-SMALLEQ}
+
+% --- DES-EQS ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{EqS}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{Eq}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-EQS}
+
+% --- DES-NOTEQ ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{NotEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxNE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-NOTEQ}
+
+%========================================================================================
+
+
+
+\vspace{1cm} 
+\textbf{Reglas concretas:}
+
+% --- DES-BIGGERS ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{BiggerS}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{MayorQue}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-BIGGERS}
+
+% --- DES-SMALLERS ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{SmallerS}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{MenorQue}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-SMALLERS}
+
+% --- DES-BIGEQ ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{BigEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxBE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-BIGEQ}
+
+% --- DES-SMALLEQ ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{SmallEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxSE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-SMALLEQ}
+
+% --- DES-EQS ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{EqS}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{Eq}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-EQS}
+
+% --- DES-NOTEQ ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{NotEq}([e_1,\dots,e_n]) \Rightarrow
+ \mathrm{If}\ (\mathrm{auxNE}\ e_1' \ e_2')\ (\mathrm{chain\_desugared}([e_2,\dots,e_n]))\ (\mathrm{Boolean}\ \mathrm{False})}
+{DES-NOTEQ}
+
+
+%====================================================================================
+
+
+\paragraph{Desazucarizaciones unarias}
+
+% --- DES-ADD1 ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{Add1}(e) \Rightarrow \mathrm{Add}(e',\ \mathrm{Num}\ 1)}
+{DES-ADD1}
+
+% --- DES-SUB1 ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{Sub1}(e) \Rightarrow \mathrm{Sub}(e',\ \mathrm{Num}\ 1)}
+{DES-SUB1}
+
+% --- DES-SQRT ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{SqrtS}(e) \Rightarrow \mathrm{App}\ (\mathrm{Id}\ \text{"sqrt"})\ e'}
+{DES-SQRT}
+
+% --- DES-EXPT ---
+\rulewithtag
+{a \Rightarrow a' \quad b \Rightarrow b'}
+{\mathrm{Expt}(a,b) \Rightarrow \mathrm{App}\ (\mathrm{App}\ (\mathrm{Id}\ \text{"expt"})\ a')\ b'}
+{DES-EXPT}
+
+% --- DES-NOT ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{NotS}(e) \Rightarrow \mathrm{Not}(e')}
+{DES-NOT}
+
+% --- DES-PAIR ---
+\rulewithtag
+{a \Rightarrow a' \quad b \Rightarrow b'}
+{\mathrm{PairS}(a,b) \Rightarrow \mathrm{Pair}(a',\ b')}
+{DES-PAIR}
+
+% --- DES-FST ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{FstS}(e) \Rightarrow \mathrm{Fst}(e')}
+{DES-FST}
+
+% --- DES-SND ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{SndS}(e) \Rightarrow \mathrm{Snd}(e')}
+{DES-SND}
+
+%
+\noindent--- para lista con n elementos (n \(\ge\) 0) ---
+
+% --- DES-LIST ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n'}
+{\mathrm{List}([e_1,\dots,e_n]) \Rightarrow \mathrm{foldr}\ \mathrm{Cons}\ \mathrm{Nil}\ [e_1',\dots,e_n']}
+{DES-LIST}
+
+% --- DES-HEAD ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{HeadS}(e) \Rightarrow \mathrm{Head}(e')}
+{DES-HEAD}
+
+% --- DES-TAIL ---
+\rulewithtag
+{e \Rightarrow e'}
+{\mathrm{TailS}(e) \Rightarrow \mathrm{Tail}(e')}
+{DES-TAIL}
+
+
+%==========================================================================================
+
+
+\paragraph{Desazucarización de funciones, aplicación y condicionales}
+
+% --- DES-LAMBDA ---
+\rulewithtag
+{b \Rightarrow b'}
+{\mathrm{LambdaS}(ps,\, b) \Rightarrow \mathrm{Fun}\ ps\ b'}
+{DES-LAMBDA}
+
+% --- DES-APP ---
+\rulewithtag
+{f \Rightarrow f' \quad a \Rightarrow a'}
+{\mathrm{AppS}(f,\, a) \Rightarrow \mathrm{App}(f',\, a')}
+{DES-APP}
+
+% --- DES-IF ---
+\rulewithtag
+{c \Rightarrow c' \quad t \Rightarrow t' \quad e \Rightarrow e'}
+{\mathrm{IfS}(c,\, t,\, e) \Rightarrow \mathrm{If}(c',\, t',\, e')}
+{DES-IF}
+
+% --- DES-IF0 ---
+\rulewithtag
+{c \Rightarrow c' \quad t \Rightarrow t' \quad e \Rightarrow e'}
+{\mathrm{If0}(c,\, t,\, e) \Rightarrow \mathrm{If}(\mathrm{Eq}(c',\, \mathrm{Num}\ 0),\, t',\, e')}
+{DES-IF0}
+
+% --- DES-LETS-N ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2' \quad \dots \quad e_n \Rightarrow e_n' \quad \text{body} \Rightarrow \text{body}'}
+{\mathrm{LetS}([\mathrm{Bind}\ x_1\ e_1,\, \dots,\, \mathrm{Bind}\ x_n\ e_n],\, \text{body}) \Rightarrow
+ \mathrm{App}\big( \dots \big(\mathrm{App}\big(\mathrm{App}\big(\mathrm{Fun}\ [x_1,\dots,x_n]\ \text{body}'\big)\ e_1'\big)\ e_2'\big) \dots\ e_n'\big)}
+{DES-LETS-N}
+
+% --- DES-LETSEQ-EMPTY ---
+\rulewithtag
+{\text{LetSeq}([],\, \text{body}) \Rightarrow \text{body}'}
+{\text{LetSeq}([],\, \text{body}) \Rightarrow \text{body}'}
+{DES-LETSEQ-EMPTY}
+
+% --- DES-LETSEQ-CONS ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad \text{LetSeq}(bs,\, \text{body}) \Rightarrow \text{body}''}
+{\text{LetSeq}(\mathrm{Bind}\ x\ e_1 : bs,\, \text{body}) \Rightarrow \mathrm{App}\big(\mathrm{Fun}\ [x]\ \text{body}''\big)\ e_1'}
+{DES-LETSEQ-CONS}
+
+% --- DES-LETREC ---
+\rulewithtag
+{e_1 \Rightarrow e_1' \quad e_2 \Rightarrow e_2'}
+{\mathrm{LetRec}(\mathrm{Bind}\ f\ e_1,\, e_2) \Rightarrow
+ \mathrm{App}\big(\mathrm{Fun}\ [f]\ e_2'\big)\big(\mathrm{App}(\mathrm{Id}\ \text{"fix"})\ (\mathrm{Fun}\ [f]\ e_1')\big)}
+{DES-LETREC}
+
+% --- DES-COND-n ---
+\noindent\textit{para $n$ cláusulas $n \ge 1$ con Else $e$}\par
+\rulewithtag
+{c_1 \Rightarrow c_1' \quad e_1 \Rightarrow e_1' \quad \dots \quad c_n \Rightarrow c_n' \quad e_n \Rightarrow e_n' \quad e \Rightarrow e'}
+{\mathrm{Cond}([\mathrm{Clause}\ c_1\ e_1,\, \dots,\, \mathrm{Clause}\ c_n\ e_n],\, \mathrm{Else}\ e) \Rightarrow
+ \mathrm{If}(c_1',\, e_1',\, \mathrm{If}(c_2',\, e_2',\, \dots\, \mathrm{If}(c_n',\, e_n',\, e')\, \dots))}
+{DES-COND-n}
+
+%==========================================================================================
+
+\subsection*{Implementación del Desugar usando Haskell}
+
+Una vez definidas nuestras funciones núcleo de nuestro ASA podemos implementarlas en haskell, para representar las que ya son mínimas, importamos el módulo donde definimos nuestra SASA y creamos un \textit{data structure} con las ASA núcleo tal que las demás expresiones se van a terminar descomponiendo en estas.
+
+La función desugar se implementa como en nuestra formalización donde Num, Bool, Id y Nil se mantienen igual al ser mínimas, las funciones con aridad mayor o igual a 2 se desazucarizan al buscar el patrón de la operación a realizar y aplicando recursivamente la función de sugar sobre el resto de la cadena. En las expresiones que son estrictamente unarias o binarias sólo desazucarizamos las expresiones que tengan como parámetros.
+
+Para la desazucarización de las comparaciones (=, >, <, >=, <=, y !=) vamos a definir una función auxiliar \texttt{chainComparison} basada en la formalización que describimos arriba, donde si la comparación no existe o se hace sobre un elemento te devuelve \texttt{true}, en caso de comparar más elementos, \texttt{chainComparison} va a tomar de dos en dos elementos y le va a aplicar la función que ingreses desazucarizando las expresiones, así recursivamente. Si la primera comparación te regresa un \texttt{false} pasa a la siguiente comparación, y sigue comparando hasta que se terminen los elementos, de modo que las comparaciones terminan en una condicional \texttt{if} sin azúcar sintáctica, pues \texttt{if} forma parte de nuestro núcleo.
+
+De igual forma (>=, <= y !=) tienen su propia desazucarización, pues (>= a b) se descompone en \texttt{if} (> a b) (\texttt{boolean true}) (= a b), dado que si se cumple la primera condición se devuelve \texttt{true} y en caso contrario se checa la segunda condición, ``\texttt{<=}'' se implementa de manera análoga y finalmente \texttt{(!= a b)} pasa a la negación de la igualdad \texttt{(not (eq a b))}.
+
+Las últimas funciones que vale la pena analizar individualmente de nuestra implementación es \texttt{let} y su variante \texttt{let*}, ya que la primera se evalúa en paralelo, mientras que la segunda secuencialmente. Al evaluar en paralelo las subexpresiones independientes pueden evaluarse en distintos procesos y semánticamente suele modelarse como una reducción paralela o multi-reducción, mientras que al evaluar en secuencial se establece una estrategia y se actúa conforme a esta. Por lo tanto \texttt{let} se desazucariza como una única función con n parámetros aplicada a n expresiones y \texttt{let*} se desazucariza como aplicaciones anidadas.
+
+
+
+
+%  Semántica de MiniLisp 
+
+
+\subsection*{Semántica de \textit{MiniLisp}:}
+
+Después de definir la sintaxis del lenguaje, es necesario precisar cómo los términos se evaluarán. Para eso, daremos una formalización de la semántica del lenguaje usando semántica operacional.
+
+La semántica operacional se refiere al uso de una máquina abstracta, donde el estado de la máquina es un término del lenguaje y su comportamiento se define por una función de transición de estados~[1].
+
+Emplearemos el enfoque de semántica estructural o de paso pequeño para formalizar la semántica operacional del lenguaje. Esto, puesto que dicho enfoque permite descomponer la evaluación de las expresiones del lenguaje en transiciones elementales y así ver detalladamente la dinámica de ejecución del mismo~[12].
+
+Para mantener una consistencia con las notaciones vistas en clase, la notación a emplear de los juicios de transición será
+\[
+  e \;\to\; e'
+\]
+, lo que significa que la expresión \(e\) se reduce en un paso a una expresión \(e'\)~[14].
+
+De igual forma, la notación de las derivaciones será la misma que la vista en clase
+\[
+  \dfrac{x_1 \ \dots \ x_n}{x}
+\]
+, donde:
+\begin{itemize}
+  \item Una regla sin premisas corresponde a un axioma~[12].
+  \item Una regla con premisas describe cómo, dado ciertos juicios, se infiere un nuevo juicio~[12].
+\end{itemize}
+
+\subsubsection*{Evaluación y alcance del lenguaje:}
+
+La evaluación que tiene el lenguaje es ansiosa (por requerimientos del proyecto) y tiene alcance estático (por requerimientos del proyecto), es decir:
+\begin{itemize}
+  \item \textbf{Evaluación Ansiosa:} Si una expresión del lenguaje tiene subexpresiones, siempre se evaluarán primero las subexpresiones y luego se aplicará la expresión original con los valores obtenidos~[15].
+  \item \textbf{Alcance Estático:} El valor de una variable se determina observando el bloque de código donde fue declarada~[16].
+\end{itemize}
+
+
+%========================================================================================
+
+
+\subsection*{Semántica en Paso Pequeño (Small Step):}
+
+Para nuestro lenguaje, emplearemos una máquina abstracta \textbf{CE} compuesta por dos
+componentes principales~[15]:
+\begin{itemize}
+  \item \textbf{Control:} La expresión que se evalúa.
+  \item \textbf{Ambiente:} Asociaciones entre variables y sus valores.
+\end{itemize}
+
+El uso de esta máquina permite tener una complejidad lineal en la búsqueda de los valores
+de variables (si se implementa en una pila o una lista, como es nuestro caso), pues tiene
+un ambiente que guarda los valores de dichas variables y permite resolverlos
+dinámicamente~[15].
+
+\medskip
+
+Ahora, definimos el sistema de transición de paso pequeño con el uso de la máquina CE
+de la siguiente forma: la tupla \(\big(C,\ \to,\ I,\ F\big)\), donde:
+\begin{itemize}
+  \item \(C = \{\, (e, \varepsilon) \mid e \in \mathrm{ASA},\ \varepsilon\ \text{un ambiente léxico}\,\}\)
+        \dotfill configuraciones.
+  \item \(\to\ \subseteq\ C \times C\) \dotfill la relación de reducción (entre configuraciones \((e,\varepsilon)\)).
+        En small step reducimos configuraciones.
+  \item \(I = \mathrm{ASA}\) \dotfill estados iniciales, pues en paso pequeño todas
+        las expresiones pueden ser estados iniciales.
+  \item \(F = \{\,\mathrm{Num}(n)\mid n\in\mathbb{Z}\,\}
+          \ \cup\ \{\,\mathrm{Bool}(b)\mid b\in\{\mathrm{True},\mathrm{False}\}\,\}
+          \ \cup\ \{\,\mathrm{Pair}(v_1,v_2)\mid v_1,v_2\in F\,\}
+          \ \cup\ \{\,\mathrm{Closure}(p,c,\varepsilon_0)\mid p:\mathrm{String},\ c\in\mathrm{ASA},\ \varepsilon_0\ \text{es un ambiente léxico}\,\}\)
+        \dotfill valores canónicos.
+\end{itemize}
+
+
+%==============================================================================
+\subsection*{Expresiones del ASAV:}
+
+Dado que en la implementación del lenguaje se debe poder diferenciar entre los estados
+que son finales de los que no lo son, se construye el conjunto \textbf{ASAV} (Árbol de
+Sintaxis Abstracta Value) para dicho fin. Estas expresiones (valores canónicos) son las que se
+regresan en cada ejecución de un programa en el lenguaje.
+
+
+
+
+\paragraph{ASAV de \textless Int\textgreater:}
+
+\[
+\rulewithtag
+  {n \in \mathbb{Z}}
+  {\mathrm{Num}(n)\ \mathrm{ASAV}}
+  {ASAV-INT}
+\]
+
+\paragraph{ASAV de \textless Bool\textgreater:}
+
+\[
+\rulewithtag
+  {b \in \{\mathrm{True},\ \mathrm{False}\}}
+  {\mathrm{Bool}(b)\ \mathrm{ASAV}}
+  {ASAV-BOOL}
+\]
+
+\paragraph{ASAV de los pares:}
+
+\[
+\rulewithtag
+  {l\ \mathrm{ASAV}\qquad r\ \mathrm{ASAV}}
+  {\mathrm{Pair}(l,r)\ \mathrm{ASAV}}
+  {ASAV-PAIR}
+\]
+
+\paragraph{ASAV de las cerraduras de función:}
+
+\[
+\rulewithtag
+  {p:\mathrm{String}\qquad c \in \mathrm{ASA}\qquad \varepsilon\ \text{es un ambiente léxico}}
+  {\mathrm{Closure}(p,c,\varepsilon)\ \mathrm{ASAV}}
+  {ASAV-CLOS}
+\]
+
+
+%=====================================================================================
+
+
+
+\paragraph{Ambientes ($\varepsilon$) y búsqueda de variables (Lookup):}
+
+Usamos un ambiente \textit{léxico} $\varepsilon$ que asocia identificadores a \textit{valores canónicos} (ASAV).
+El ambiente se modela como una lista (o pila) de enlaces con sombreados por derecha:
+\begin{itemize}
+  \item $\varepsilon ::= [\,] \mid \varepsilon[x \mapsto v]$
+  \item \textbf{Función de búsqueda} (toma el \emph{enlace más reciente}): 
+  $(x,v)\in\varepsilon \text{ si } \varepsilon = \varepsilon'[x \mapsto v] \text{ o } (x,v)\in\varepsilon'$.
+\end{itemize}
+
+\textbf{Reglas de Lookup:}
+
+% --- Lookup-Hit ---
+\rulewithtag
+{(x,v)\in \varepsilon}
+{\langle \mathrm{Id}(x),\, \varepsilon \rangle \;\to\; \langle v,\, \varepsilon \rangle}
+{Lookup-Hit}
+
+% --- Lookup-Miss ---
+\rulewithtag
+{x \notin \mathrm{dom}(\varepsilon)}
+{\langle \mathrm{Id}(x),\, \varepsilon \rangle \;\to\; \mathrm{error}}
+{Lookup-Miss}
+
+
+
+% --- Régimen de evaluación ---
+\paragraph{Régimen de evaluación que usaremos (para todo el small-step):}
+
+\begin{itemize}
+  \item \textbf{Estrategia: Call-by-Value (CBV)} con orden izquierda $\to$ derecha.
+\end{itemize}
+
+Primero se reduce el operando/guardia del lado izquierdo, luego el derecho, y \textit{sólo} cuando ambos son valores se aplica la regla base del constructor (suma, comparación, aplicación, etc.).
+
+\begin{itemize}
+  \item \textbf{Alcance: estático (léxico).}
+\end{itemize}
+
+Las funciones se evalúan como cerraduras $\mathrm{Closure}\langle p, c, \varepsilon_{0}\rangle$ que capturan el ambiente del punto de definición. La regla de $\beta v$ sustituirá enlazando $p \mapsto v$ en $\varepsilon_{0}$, no en el ambiente de llamada.
+
+\begin{itemize}
+  \item \textbf{Determinismo (esbozo):}
+\end{itemize}
+
+Con CBV y el orden $L \to R$, para toda configuración no final $\langle e,\varepsilon\rangle$ existe a lo más un contexto activo y, por tanto, un siguiente paso $\langle e',\varepsilon'\rangle$. Esto asegura que la relación $\to$ sea determinista a nivel de un paso.
+
+% --- Esquemas contextuales ---
+\paragraph{Esquemas contextuales (patrones de evaluación):}
+
+Bajo \textbf{CBV con orden izquierda $\to$ derecha}, toda construcción con subexpresiones se evalúa primero a la \textit{izquierda} y después a la \textit{derecha}. Para evitar repetir reglas, usamos \textit{familias} que luego se instancian por operador.
+
+
+
+% Esquemas contextuales (patrones)
+
+
+\paragraph{Binarios (familia general):}
+
+% Bin-Left
+\rulewithtag{
+  \langle e_1, \varepsilon \rangle \;\to\; \langle e_1', \varepsilon \rangle
+}{
+  \oneconcl{ \langle \mathrm{Bin}(e_1, e_2), \varepsilon \rangle \;\to\; \langle \mathrm{Bin}(e_1', e_2), \varepsilon \rangle }
+}{\text{(Bin-Left)}}
+
+% Bin-Right
+\rulewithtag{
+  \langle e_2, \varepsilon \rangle \;\to\; \langle e_2', \varepsilon \rangle \quad v \in F
+}{
+  \oneconcl{ \langle \mathrm{Bin}(v, e_2), \varepsilon \rangle \;\to\; \langle \mathrm{Bin}(v, e_2'), \varepsilon \rangle }
+}{\text{(Bin-Right)}}
+
+\noindent\textit{Instanciación:} si \(\mathrm{Bin}=\mathrm{Add}\) obtienes \(\mathrm{Add\text{-}Left}\) y \(\mathrm{Add\text{-}Right}\); si \(\mathrm{Bin}=\mathrm{Lt}\), obtienes \(\mathrm{Lt\text{-}Left}/\mathrm{Lt\text{-}Right}\), etc.
+
+\vspace{6pt}
+
+\paragraph{Unarios (Familia general)}
+
+% Un-Arg
+\rulewithtag{
+  \langle e, \varepsilon \rangle \;\to\; \langle e', \varepsilon \rangle
+}{
+  \oneconcl{ \langle \mathrm{Un}(e), \varepsilon \rangle \;\to\; \langle \mathrm{Un}(e'), \varepsilon \rangle }
+}{\text{(Un-Arg)}}
+
+\noindent\textit{Instanciación:} \(\mathrm{Un}=\mathrm{Not}\), \(\mathrm{Un}=\mathrm{Fst}\), \(\mathrm{Un}=\mathrm{Snd}\), etc. (Las reglas base de cada uno van en su sección.)
+
+\vspace{6pt}
+
+\paragraph{Condicional (patrón del guardia):}
+
+% If-Guard
+\rulewithtag{
+  \langle g, \varepsilon \rangle \;\to\; \langle g', \varepsilon \rangle
+}{
+  \oneconcl{ \langle \mathrm{If}(g, t, f), \varepsilon \rangle \;\to\; \langle \mathrm{If}(g', t, f), \varepsilon \rangle }
+}{\text{(If-Guard)}}
+
+\noindent Las bases (\emph{If-True}/\emph{If-False}) irán en el bloque de condicional.
+
+
+
+
+
+
+
+% ------------------------------------------
+\paragraph{Aplicación (solo el patrón; las bases van después):}
+
+\rulewithtag{
+  \langle e_1,\varepsilon\rangle \to \langle e_1',\varepsilon\rangle
+}{
+  \langle \mathrm{App}(e_1,e_2),\varepsilon\rangle \to \langle \mathrm{App}(e_1',e_2),\varepsilon\rangle
+}{\text{(App-Fun)}}
+
+\rulewithtag{
+  \langle e_2,\varepsilon\rangle \to \langle e_2',\varepsilon\rangle \quad v \in \mathsf{F}
+}{
+  \langle \mathrm{App}(v,e_2),\varepsilon\rangle \to \langle \mathrm{App}(v,e_2'),\varepsilon\rangle
+}{\text{(App-Arg)}}
+
+\noindent\textit{La $\beta v$ (aplicación por valor sobre \textit{closures}) aparecerá en su bloque respectivo.}
+% ------------------------------------------
+
+
+
+
+% =====================
+\paragraph{Catálogo de side-conditions:}
+
+Para mantener la semántica clara y determinista, fijamos estas condiciones (se \emph{referenciarán} en las reglas base de cada operador):
+
+\begin{itemize}
+  \item \textbf{Tipos esperados}
+  \begin{itemize}
+    \item Aritmética \(\mathrm{Add}, \mathrm{Sub}, \mathrm{Mult}, \mathrm{Div}, \mathrm{Expt}\): ambos argumentos deben ser \(\mathbf{Num}\)
+    \item Comparadores \(\mathrm{Eq}, \mathrm{Lt}, \mathrm{Le}, \mathrm{Gt}, \mathrm{Ge}\): argumentos \(\mathbf{Num}\)
+    \item \(\mathrm{Not}\): argumento \(\mathbf{Bool}\)
+    \item \(\mathrm{Fst}/\mathrm{Snd}\): argumento \(\mathbf{Pair}(v_1,v_2)\)
+    \item \(\mathrm{If}\): guardia \(\mathbf{Bool}(\mathbf{True}/\mathbf{False})\)
+    \item \(\mathrm{App}\): la \(\mathrm{fun}\) debe ser \(\mathbf{Closure}(p,c,\varepsilon_0)\) antes de aplicar \(\beta v\)
+  \end{itemize}
+\end{itemize}
+
+% =========================
+% Reglas que comparten las operaciones aritméticas
+% =========================
+\paragraph{Reglas que comparten las operaciones aritméticas:}
+
+
+% -------------------------------------------------
+% Operadores aritméticos compartidos
+
+\[
+\mathrm{Ar} = \{\ \mathrm{Add},\ \mathrm{Sub},\ \mathrm{Mult},\ \mathrm{Div},\ \mathrm{Expt}\ \}
+\]
+
+
+
+
+\newcommand{\rulewithtagwrap}[3]{%
+  \[
+    \frac{#1}{#2}%
+    \hfill
+    \begin{minipage}[t]{.64\linewidth}% 
+      \raggedleft\footnotesize
+      \sloppy\setlength{\emergencystretch}{6em}% 
+      #3
+    \end{minipage}%
+  \]
+}
+
+
+
+% --- i-step ---
+\rulewithtagwrap
+  {\langle i,\varepsilon\rangle \to \langle i',\varepsilon\rangle}
+  {\langle Ar(i,d),\varepsilon\rangle \to \langle Ar(i',d),\varepsilon\rangle}
+  {Add-Left/Right, Sub-Left/Right, Mult-Left/Right, Div-Left/Right, Expt-Left/Right}
+
+\rulewithtagwrap
+  {\langle d,\varepsilon\rangle \to \langle d',\varepsilon\rangle}
+  {\langle Ar(\mathrm{Num}(n),d),\varepsilon\rangle \to \langle Ar(\mathrm{Num}(n),d'),\varepsilon\rangle}
+  {Add-Left\slash Right,\allowbreak
+   Sub-Left\slash Right,\allowbreak
+   Mult-Left\slash Right,\allowbreak
+   Div-Left\slash Right,\allowbreak
+   Expt-Left\slash Right}
+
+
+
+
+
+
+
+% Regla base específica de Add
+
+
+
+
+\vspace{1cm}
+\paragraph{Reglas únicas de Add:}
+% --- (Add-Num) ---
+\rulewithtag{
+}{
+  \oneconcl{\langle \mathrm{Add}(\mathrm{Num}(n),\ \mathrm{Num}(m)),\ \varepsilon \rangle \;\to\; \langle \mathrm{Num}(n {+}_{\mathbb{Z}} m),\ \varepsilon \rangle}
+}{
+  Add\text{-}Num
+}
+
+
+\vspace{1cm}
+% --- Reglas únicas de Sub ---
+\noindent\textbf{Reglas únicas de Sub:}
+
+\[
+\rulewithtagwrap
+{\langle \mathrm{Sub}(\mathrm{Num}(n),\, \mathrm{Num}(m)),\, \varepsilon \rangle}
+{\langle \mathrm{Num}(n \mathbin{-_{\mathbb Z}} m),\, \varepsilon \rangle}
+{\text{(Sub-Num)}}
+\]
+
+% --- Reglas únicas de Mult ---
+\noindent\textbf{Reglas únicas de Mult:}
+
+\[
+\rulewithtagwrap
+{\langle \mathrm{Mult}(\mathrm{Num}(n),\, \mathrm{Num}(m)),\, \varepsilon \rangle}
+{\langle \mathrm{Num}(n \mathbin{\times_{\mathbb Z}} m),\, \varepsilon \rangle}
+{\text{(Mult-Num)}}
+\]
+
+
+
+
+
+\paragraph{Reglas únicas de $\mathrm{Div}$}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Div}(\mathrm{Num}(n), \mathrm{Num}(0)), \varepsilon \rangle \;\rightarrow\; \mathrm{error}}%
+{Div-Cero}
+
+\vspace{1 cm}
+m \neq 0 
+\rulewithtag
+{}%
+{\langle \mathrm{Div}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \;\rightarrow\; \langle \mathrm{Num}(n \mathbin{/_{\mathrm{Z}}} m), \varepsilon \rangle}%
+{Div-Num}
+
+
+\vspace{1cm}
+\paragraph{Reglas únicas de $\mathrm{Expt}$}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Expt}(\mathrm{Num}(n), \mathrm{Num}(0)), \varepsilon \rangle \;\rightarrow\; \langle \mathrm{Num}(1), \varepsilon \rangle}%
+{Expt-Cero}
+
+\vspace{1cm}
+\rulewithtag
+{}%
+{\langle \mathrm{Expt}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \;\rightarrow\; \langle \mathrm{Num}(n^{m}), \varepsilon \rangle}%
+{Expt-Num}
+
+
+\vspace{1cm}
+\paragraph{Condicional (If)}
+
+Primero se evalúa la \textbf{guardia} (patrón ya definido como \textit{If-Guard}). Las reglas base aplican sólo cuando la guardia es \textbf{boolean}:
+
+\rulewithtag
+{}%
+{\langle \mathrm{If}(\mathrm{Bool}(\mathrm{True}), t, f), \varepsilon \rangle \;\rightarrow\; \langle t, \varepsilon \rangle}%
+{If-True}
+\vspace{1cm}
+\rulewithtag
+{}%
+{\langle \mathrm{If}(\mathrm{Bool}(\mathrm{False}), t, f), \varepsilon \rangle \;\rightarrow\; \langle f, \varepsilon \rangle}%
+{If-False}
+
+Si la guardia no es \textbf{boolean}, el condicional es inválido:
+
+\rulewithtag
+{}%
+{\langle \mathrm{If}(v, t, f), \varepsilon \rangle \;\rightarrow\; \mathrm{error}}%
+{If-Err}
+\vspace{1cm}
+si $v \notin \{\mathrm{Bool}(\mathrm{True}),\, \mathrm{Bool}(\mathrm{False})\}$
+
+\textit{Side-condition usada}: la guardia debe ser $\mathrm{Bool}(b)$. Esto respeta CBV y evita ambigüedad.
+
+
+
+
+\paragraph{Negación (Not)}
+
+Primero se reduce su argumento (patrón \textit{Un-Arg}). Bases:
+
+\rulewithtag
+{}%
+{\langle \mathrm{Not}(\mathrm{Bool}(b)), \varepsilon \rangle \;\rightarrow\; \langle \mathrm{Bool}(\neg b), \varepsilon \rangle}%
+{Not-Base}
+
+Argumento inválido:
+
+\rulewithtag
+{}%
+{\langle \mathrm{Not}(v), \varepsilon \rangle \;\rightarrow\; \mathrm{error}}%
+{Not-Err}
+
+si $v \notin \{\mathrm{Bool}(\mathrm{True}),\, \mathrm{Bool}(\mathrm{False})\}$
+
+
+
+\vspace{1cm}
+\paragraph{Comparadores ($\mathrm{Eq}$, $\mathrm{Lt}$, $\mathrm{Le}$, $\mathrm{Gt}$, $\mathrm{Ge}$)}
+
+\textbf{Patrón contextual (hereda Bin-Left / Bin-Right):}
+
+Para cada comparador binario $\mathrm{Cmp}\in\{\mathrm{Eq},\mathrm{Lt},\mathrm{Le},\mathrm{Gt},\mathrm{Ge}\}$ usamos las familias genéricas:
+
+\rulewithtag
+{\langle e_{1}, \varepsilon \rangle \rightarrow \langle e_{1}', \varepsilon \rangle}%
+{\langle \mathrm{Cmp}(e_{1}, e_{2}), \varepsilon \rangle \rightarrow \langle \mathrm{Cmp}(e_{1}', e_{2}), \varepsilon \rangle}%
+{Cmp-Left}
+
+\vspace{1cm}
+\rulewithtag
+{\langle e_{2}, \varepsilon \rangle \rightarrow \langle e_{2}', \varepsilon \rangle \quad v \in \mathcal{F}}%
+{\langle \mathrm{Cmp}(v, e_{2}), \varepsilon \rangle \rightarrow \langle \mathrm{Cmp}(v, e_{2}'), \varepsilon \rangle}%
+{Cmp-Right}
+
+\vspace{1cm}
+\textbf{Reglas base (tipadas a enteros):}
+
+\emph{Usan la side-condition global: los comparadores trabajan sobre $\mathrm{Num},\mathrm{Num}$. Si no se cumple, es \texttt{error}.}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Eq}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \rightarrow \langle \mathrm{Bool}(n = m), \varepsilon \rangle}%
+{Eq-Num}
+\vspace{1cm}
+\rulewithtag
+{}%
+{\langle \mathrm{Lt}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \rightarrow \langle \mathrm{Bool}(n < m), \varepsilon \rangle}%
+{Lt-Num}
+\vspace{1cm}
+\rulewithtag
+{}%
+{\langle \mathrm{Le}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \rightarrow \langle \mathrm{Bool}(n \le m), \varepsilon \rangle}%
+{Le-Num}
+\vspace{1cm}
+\rulewithtag
+{}%
+{\langle \mathrm{Gt}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \rightarrow \langle \mathrm{Bool}(n > m), \varepsilon \rangle}%
+{Gt-Num}
+\vspace{1cm}
+\rulewithtag
+{}%
+{\langle \mathrm{Ge}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \rightarrow \langle \mathrm{Bool}(n \ge m), \varepsilon \rangle}%
+{Ge-Num}
+
+\vspace{1cm}
+\textbf{Tipos inválidos (mismo criterio para todos los comparadores):}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Cmp}(v_{1}, v_{2}), \varepsilon \rangle \rightarrow \mathrm{Error}}%
+{Cmp-Err}
+
+si $\,(v_{1}, v_{2}) \notin \mathrm{Num}\times \mathrm{Num}$
+
+Esto mantiene la semántica determinista y coherente con el catálogo: sólo $\mathrm{Num},\mathrm{Num}$ son válidos para $\mathrm{Cmp}$; el resultado siempre es $\mathrm{Bool}(b)$.
+
+
+
+\paragraph{Pares y proyecciones ($\mathrm{Pair}$ / $\mathrm{Fst}$ / $\mathrm{Snd}$)}
+
+\textbf{Valores con pares}
+
+Extendemos $\mathcal{F}$ con pares anidados:
+
+\[
+\mathcal{F} \,\ni\, \mathrm{Pair}(v_{1}, v_{2}) \quad \text{si} \quad v_{1}\in \mathcal{F}\ \wedge\ v_{2}\in \mathcal{F}.
+\]
+
+\textbf{Construcción de pares}
+
+Patrón contextual:
+
+\rulewithtag
+{\langle e_{1}, \varepsilon \rangle \rightarrow \langle e_{1}', \varepsilon \rangle}%
+{\langle \mathrm{Pair}(e_{1}, e_{2}), \varepsilon \rangle \rightarrow \langle \mathrm{Pair}(e_{1}', e_{2}), \varepsilon \rangle}%
+{Pair-Left}
+
+\rulewithtag
+{\langle e_{2}, \varepsilon \rangle \rightarrow \langle e_{2}', \varepsilon \rangle \quad v \in \mathcal{F}}%
+{\langle \mathrm{Pair}(v, e_{2}), \varepsilon \rangle \rightarrow \langle \mathrm{Pair}(v, e_{2}'), \varepsilon \rangle}%
+{Pair-Right}
+
+\vspace{1cm}
+\textbf{Regla base (creación de valor par):}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Pair}(v_{1}, v_{2}), \varepsilon \rangle \rightarrow \langle \mathrm{Pair}(v_{1}, v_{2}), \varepsilon \rangle}%
+{Pair-Val}
+
+Observación. Si $v_{1},v_{2}\in \mathcal{F}$, entonces $\mathrm{Pair}(v_{1},v_{2})\in \mathcal{F}$ (no hay paso).
+
+\textbf{Proyecciones: Fst/Snd}
+
+Patrón contextual (instancia de \textit{Un-Arg}):
+
+\rulewithtag
+{\langle e, \varepsilon \rangle \rightarrow \langle e', \varepsilon \rangle}%
+{\langle \mathrm{Fst}(e), \varepsilon \rangle \rightarrow \langle \mathrm{Fst}(e'), \varepsilon \rangle}%
+{Fst-Arg}
+
+\rulewithtag
+{\langle e, \varepsilon \rangle \rightarrow \langle e', \varepsilon \rangle}%
+{\langle \mathrm{Snd}(e), \varepsilon \rangle \rightarrow \langle \mathrm{Snd}(e'), \varepsilon \rangle}%
+{Snd-Arg}
+
+\vspace{1cm}
+\textbf{Reglas base (sobre valores par):}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Fst}(\mathrm{Pair}(v_{1}, v_{2})), \varepsilon \rangle \rightarrow \langle v_{1}, \varepsilon \rangle}%
+{Fst-Pair}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Snd}(\mathrm{Pair}(v_{1}, v_{2})), \varepsilon \rangle \rightarrow \langle v_{2}, \varepsilon \rangle}%
+{Snd-Pair}
+
+\vspace{1cm}
+\textbf{Errores por tipo inválido:}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Fst}(v), \varepsilon \rangle \rightarrow \mathrm{error}}%
+{Fst-Err}
+
+si $\,v \neq \mathrm{Pair}(v_{1}, v_{2})$
+
+\rulewithtag
+{}%
+{\langle \mathrm{Snd}(v), \varepsilon \rangle \rightarrow \mathrm{error}}%
+{Snd-Err}
+
+si $\,v \neq \mathrm{Pair}(v_{1}, v_{2})$
+
+\textit{Side-condition aplicada}: los argumentos de $\mathrm{Fst}/\mathrm{Snd}$ deben ser \textbf{valores par}. Esto mantiene determinismo y unifica el tratamiento de errores.
+
+
+
+%=================================================================================
+\paragraph{Listas}
+
+Patrón, instancia de \textit{Un-Arg}:
+
+\rulewithtag
+{\langle e, \varepsilon \rangle \rightarrow \langle e', \varepsilon \rangle}%
+{\langle \mathrm{Head}(e), \varepsilon \rangle \rightarrow \langle \mathrm{Head}(e'), \varepsilon \rangle}%
+{Head-Arg}
+
+\rulewithtag
+{\langle e, \varepsilon \rangle \rightarrow \langle e', \varepsilon \rangle}%
+{\langle \mathrm{Tail}(e), \varepsilon \rangle \rightarrow \langle \mathrm{Tail}(e'), \varepsilon \rangle}%
+{Tail-Arg}
+
+\vspace{1cm}
+Bases:
+
+\rulewithtag
+{}%
+{\langle \mathrm{Head}(\mathrm{Cons}(v, xs)), \varepsilon \rangle \rightarrow \langle v, \varepsilon \rangle}%
+{Head-Cons}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Tail}(\mathrm{Cons}(v, xs)), \varepsilon \rangle \rightarrow \langle xs, \varepsilon \rangle}%
+{Tail-Cons}
+
+\vspace{1cm}
+Errores:
+
+\rulewithtag
+{}%
+{\langle \mathrm{Head}(v), \varepsilon \rangle \rightarrow \mathrm{error}}%
+{Head-Err}
+
+si $\,v \ne \mathrm{Cons}(v_{1}, xs)$
+
+\rulewithtag
+{}%
+{\langle \mathrm{Tail}(v), \varepsilon \rangle \rightarrow \mathrm{error}}%
+{Tail-Err}
+
+si $\,v \ne \mathrm{Cons}(v_{1}, xs)$
+
+
+
+\paragraph{Funciones y Aplicación ($\mathrm{Lambda}$ / $\mathrm{App}$ / $\beta v$ con closures)}
+
+\textbf{Valores de función y cerraduras}
+
+En $\mathcal{F}$ las funciones son \textbf{cerraduras}:
+\[
+\mathcal{F} \,\ni\, \mathrm{Closure}(p, c, \varepsilon_{0})
+\quad\text{donde } p\in \mathrm{Id},\; c\in \mathrm{ASA},\; \varepsilon_{0}\text{ es el ambiente léxico capturado.}
+\]
+
+\textbf{Lambdas como cerraduras (creación)}
+
+\rulewithtag
+{}%
+{\langle \mathrm{Lambda}(p, c), \varepsilon \rangle \rightarrow \langle \mathrm{Closure}(p, c, \varepsilon), \varepsilon \rangle}%
+{Lam-Clos}
+
+Con esto, el valor de una función \emph{siempre} es $\mathrm{Closure}(\dots)$: refleja \textit{alcance estático} (se captura $\varepsilon$ del punto de definición).
+
+\textbf{Aplicación (patrones contextuales; hereda App-Fun / App-Arg)}
+
+\rulewithtag
+{\langle e_{1}, \varepsilon \rangle \rightarrow \langle e_{1}', \varepsilon \rangle}%
+{\langle \mathrm{App}(e_{1}, e_{2}), \varepsilon \rangle \rightarrow \langle \mathrm{App}(e_{1}', e_{2}), \varepsilon \rangle}%
+{App-Fun}
+
+\rulewithtag
+{\langle e_{2}, \varepsilon \rangle \rightarrow \langle e_{2}', \varepsilon \rangle \quad v \in \mathcal{F}}%
+{\langle \mathrm{App}(v, e_{2}), \varepsilon \rangle \rightarrow \langle \mathrm{App}(v, e_{2}'), \varepsilon \rangle}%
+{App-Arg}
+
+\vspace{1cm}
+\textbf{Regla base de aplicación ($\beta v$ por ambiente)}
+
+\rulewithtag
+{}%
+{\langle \mathrm{App}(\mathrm{Closure}(p, c, \varepsilon_{0}), v), \varepsilon \rangle \rightarrow \langle c, \varepsilon_{0}[p \mapsto v] \rangle}%
+{App-$\beta v$}
+
+El paso $\beta v$ sustituye en el \emph{ambiente capturado} $\varepsilon_{0}$; el nuevo ambiente es $\varepsilon_{0}[p \mapsto v]$.
+
+\vspace{1cm}
+\textbf{Aplicación inválida (no-función)}
+
+\rulewithtag
+{}%
+{\langle \mathrm{App}(v, w), \varepsilon \rangle \rightarrow \mathrm{error}}%
+{App-Err}
+
+si $\,v \ne \mathrm{Closure}(p, c, \varepsilon_{0})$
+
+\textit{Side-conditions:} por \textbf{CBV} (izq$\to$der) evaluamos primero la función hasta valor, luego el argumento hasta valor; solo entonces intentamos (App-$\beta v$). Si la “fun” no es \emph{closure}, caemos en \textsc{App-Err}.
+
+
+
+\paragraph{Posibles errores}
+
+\noindent\textit{Convención:} \textbf{error} es un estado terminal (no es un valor). Toda regla que lo produzca termina la ejecución (no hay pasos desde \textit{error}). 
+
+\begin{enumerate}
+  \item \textbf{Variable no ligada} \textit{(Lookup-Miss)}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Id}(x), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Lookup-Miss}
+
+  \noindent si $\,x \notin \mathrm{dom}(\varepsilon)$.
+
+  \medskip
+
+  \item \textbf{División entre cero}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Div}(\mathrm{Num}(n), \mathrm{Num}(0)), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Div-Cero}
+
+  \medskip
+
+  \item \textbf{Tipos inválidos (operadores aritméticos)}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Ar}(v_{1}, v_{2}), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Ar-Err}
+
+  \noindent si $(v_{1}, v_{2}) \notin \mathrm{Num}\times \mathrm{Num}$,\; con $\mathrm{Ar}\in\{\mathrm{Add},\mathrm{Sub},\mathrm{Mult},\mathrm{Div},\mathrm{Expt}\}$.
+
+  \medskip
+
+  \item \textbf{Exponentes negativos} (si aritmética entera)
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Expt}(\mathrm{Num}(n), \mathrm{Num}(m)), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Expt-Neg}
+
+  \noindent si $\,m<0$.
+
+  \medskip
+
+  \item \textbf{Comparadores fuera de tipo}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Cmp}(v_{1}, v_{2}), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Cmp-Err}
+
+  \noindent si $(v_{1}, v_{2}) \notin \mathrm{Num}\times \mathrm{Num}$,\; con $\mathrm{Cmp}\in\{\mathrm{Eq},\mathrm{Lt},\mathrm{Le},\mathrm{Gt},\mathrm{Ge}\}$.
+
+  \medskip
+
+  \item \textbf{\textit{If} con guardia no booleana}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{If}(v, t, f), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {If-Err}
+
+  \noindent si $\,v \notin \{\mathrm{Bool}(\mathrm{True}),\,\mathrm{Bool}(\mathrm{False})\}$.
+
+  \medskip
+
+  \item \textbf{\textit{Not} con argumento no booleano}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Not}(v), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Not-Err}
+
+  \noindent si $\,v \notin \{\mathrm{Bool}(\mathrm{True}),\,\mathrm{Bool}(\mathrm{False})\}$.
+
+  \medskip
+
+  \item \textbf{Proyecciones sobre no-par}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Fst}(v), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Fst-Err}
+
+  \noindent si $\,v \neq \mathrm{Pair}(v_{1}, v_{2})$.
+
+  \smallskip
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{Snd}(v), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {Snd-Err}
+
+  \noindent si $\,v \neq \mathrm{Pair}(v_{1}, v_{2})$.
+
+  \medskip
+
+  \item \textbf{Aplicación a no-función}
+
+  \rulewithtag
+  {}%
+  {\langle \mathrm{App}(v, w), \varepsilon \rangle \rightarrow \mathrm{error}}%
+  {App-Err}
+
+  \noindent si $\,v \neq \mathrm{Closure}(p, c, \varepsilon_{0})$.
+\end{enumerate}
+
+
+
+%================================================================================
+
+\subsection*{Ejemplos de Derivaciones Completas}
+
+\paragraph{(A) β-por-valor con cierre + aritmética}
+
+\textbf{Expresión:} \texttt{App(Lambda(x, Add(x, Num(1))), Num(3))}
+
+\[
+\begin{aligned}
+&\langle \mathrm{App}(\mathrm{Lambda}(x, \mathrm{Add}(x, \mathrm{Num}(1))), \mathrm{Num}(3)), \varepsilon \rangle \\
+&\to \langle \mathrm{App}(\mathrm{Closure}(x, \mathrm{Add}(x, \mathrm{Num}(1)), \varepsilon), \mathrm{Num}(3)), \varepsilon \rangle \quad \text{(Lam-Clos)} \\
+&\to \langle \mathrm{Add}(x, \mathrm{Num}(1)), \varepsilon[x \mapsto \mathrm{Num}(3)] \rangle \quad \text{(App-$\beta v$)} \\
+&\to \langle \mathrm{Add}(\mathrm{Num}(3), \mathrm{Num}(1)), \varepsilon[x \mapsto \mathrm{Num}(3)] \rangle \quad \text{(Lookup-Hit + Bin-Left)} \\
+&\to \langle \mathrm{Num}(4), \varepsilon[x \mapsto \mathrm{Num}(3)] \rangle \quad \text{(Add-Num)}
+\end{aligned}
+\]
+
+\paragraph{(B) Fst correcto y error por tipo}
+
+\textbf{1. Caso correcto:}
+\[
+\langle \mathrm{Fst}(\mathrm{Pair}(\mathrm{Num}(1), \mathrm{Num}(2))), \varepsilon \rangle \to \langle \mathrm{Num}(1), \varepsilon \rangle \quad \text{(Fst-Pair)}
+\]
+
+\textbf{2. Error por tipo:}
+\[
+\langle \mathrm{Fst}(\mathrm{Num}(7)), \varepsilon \rangle \to \mathrm{error} \quad \text{(Fst-Err)}
+\]
+
+\paragraph{(C) Cond desazucarado a If + cortocircuito}
+
+\textbf{Expresión concreta:}
+\begin{verbatim}
+(cond [Eq(Num(2), Num(2)) => Num(10)]
+      [Else => Num(20)])
+\end{verbatim}
+
+\textbf{Desazucarado al núcleo:}
+\[
+\mathrm{If}(\mathrm{Eq}(\mathrm{Num}(2), \mathrm{Num}(2)), \mathrm{Num}(10), \mathrm{Num}(20))
+\]
+
+\[
+\begin{aligned}
+&\langle \mathrm{If}(\mathrm{Eq}(\mathrm{Num}(2), \mathrm{Num}(2)), \mathrm{Num}(10), \mathrm{Num}(20)), \varepsilon \rangle \\
+&\to \langle \mathrm{If}(\mathrm{Bool}(\mathrm{True}), \mathrm{Num}(10), \mathrm{Num}(20)), \varepsilon \rangle \quad \text{(Eq-Num)} \\
+&\to \langle \mathrm{Num}(10), \varepsilon \rangle \quad \text{(If-True)}
+\end{aligned}
+\]
+
+
+
+\subsection*{Implementación de la semántica en Haskell}
+
+Una vez formalizado en papel nuestra semántica, ya podemos implementarla en nuestro lenguaje anfitrión Haskell.
+
+Para la implementación, se crea el módulo Interp, importando el archivo \texttt{Desugar.hs}, que tiene la gramática final ASAV del lenguaje. Luego, se define el tipo de dato \texttt{ENV = [(String, ASAV)]} que son los ambientes léxicos $\varepsilon$, mencionados anteriormente en el sistema de transiciones de paso pequeño. También, se define el tipo de dato \texttt{Config = (ASA, ENV)} que representan las configuraciones del sistema de paso pequeño.
+
+Ahora bien, el módulo tiene varias funciones auxiliares para facilitar la implementación de la semántica.
+
+\paragraph{Función isCanon:}
+
+La función \texttt{isCanon :: ASA -> Bool} determina si una expresión del ASA pertenece a los estados finales $F = \{\, \mathrm{Num}(n) \mid n \in \mathbb{Z} \,\} \cup \{\, \mathrm{Boolean}(b) \mid b \in \{\mathrm{True}, \mathrm{False}\} \,\} \cup \{\, \mathrm{Pair}(v_1, v_2) \mid v_1, v_2 \in F \,\} \cup \{\, \mathrm{Closure}(p, c, \varepsilon_0) \mid p : \mathrm{String},\ c \in E,\ \varepsilon_0\ \text{es un ambiente léxico} \,\}$ de la semántica. Por lo tanto, determina si una expresión del ASA es un valor canónico.
+
+\begin{verbatim}
+isCanon :: ASA -> Bool
+isCanon (Num _) = True
+isCanon (Boolean _) = True
+isCanon (Pair _ _) = True
+isCanon (Fun _ _) = True -- aquí, se emplea el equivalente de Closure en ASA.
+isCanon _ = False
+\end{verbatim}
+
+\paragraph{Función isPair:}
+
+La función \texttt{isPair :: ASA -> Bool} determina si una expresión del ASA es un Pair.
+
+\begin{verbatim}
+isPair :: ASA -> Bool
+isPair (Pair _ _) = True
+isPair _ = False
+\end{verbatim}
+
+\paragraph{Función toASAV:}
+
+La función \texttt{toASAV :: ASA -> ASAV} transforma una ASA que pertenezca a los valores canónicos en su forma equivalente en ASAV.
+
+\begin{verbatim}
+toASAV :: ASA -> ASAV
+toASAV (Num n) = (NumV n)
+toASAV (Boolean b) = (BooleanV b)
+toASAV (Pair l r) = (PairV (toASAV l) (toASAV r))
+toASAV (Fun x c) = Closure x c [] -- Aquí, capturamos el closure con el ambiente vacío
+\end{verbatim}
+
+\paragraph{Función returnASA:}
+
+La función \texttt{returnASA :: ASAV -> ASA} transforma un ASAV a su forma equivalente en ASA.
+
+\begin{verbatim}
+returnASA :: ASAV -> ASA
+returnASA (NumV n) = (Num n)
+returnASA (BooleanV b) = (Boolean b)
+returnASA (PairV l r) = (Pair (returnASA l) (returnASA r))
+returnASA (Closure x c env) = Fun x c
+returnASA (Error msg) = error msg
+\end{verbatim}
+
+\paragraph{Función lookupHit:}
+
+La función \texttt{lookupHit :: String -> ENV -> ASAV} busca el valor de un identificador en un ambiente léxico ENV y lo devuelve.
+
+\begin{itemize}
+    \item Si el ambiente está vacío, devuelve un Error con un string que explica que el error obtenido es que la variable ``i'' a buscar su valor es libre: \texttt{'Error LookUpMiss: El identificador  ++ i ++   es una variable libre'}
+    \item Si el ambiente no está vacío y se busca la variable ``i'', si ``i'' es igual a la variable de la primera tupla del ambiente (que es una lista de tuplas (String, ASAV)), se regresa el valor de esa tupla (el ASAV). Si no es igual a la primera tupla del ambiente, se busca en las siguientes tuplas del ambiente.
+\end{itemize}
+
+\begin{verbatim}
+lookupHit :: String -> ENV -> ASAV
+lookupHit i [] = Error ("Error LookUpMiss: El identificador " ++ i ++ " es una variable libre")
+lookupHit i ((x,v):xs) = if i == x then v else lookupHit i xs
+\end{verbatim}
+
+
+\paragraph{Función eval:}
+
+La función \texttt{eval :: Config -> Config} evalúa configuraciones hasta llegar a una configuración de un valor canónico.
+
+\begin{itemize}
+    \item Si tenemos la configuración \texttt{(e, env)} y \texttt{isCanon e} es verdadero, entonces la expresión ``e'' es un valor canónico y por ende ya se llegó a una configuración de un valor canónico, por lo que se regresa \texttt{(e, env)}.
+    \item En otro caso, hace \texttt{eval (smallStep (e, env))}, para seguir evaluando \texttt{(e, env)}.
+\end{itemize}
+
+\paragraph{Función evalFinal:}
+
+La función \texttt{evalFinal :: Config -> ConfigASAV} evalúa configuraciones usando \texttt{eval} y el resultado lo transforma a su forma equivalente en configuraciones ASAV, ENV. Dicha función, es la que se emplea para evaluar las expresiones ASA en su totalidad a un valor canónico ASAV.
+
+\paragraph{Tipo de dato ConfigASAV:}
+
+Configuraciones (tuplas) de tipo \texttt{(ASAV, ENV)}.
+
+\paragraph{Función smallStep:}
+
+Ahora, describamos la función principal que implementa la semántica de paso pequeño.
+
+La función \texttt{smallStep :: Config -> Config}, implementa las reglas de transición de paso pequeño antes mencionadas, ordenadas de menos generales a más generales, de modo que Haskell pueda evaluar primero aquellas reglas que reconocen configuraciones donde las subexpresiones ya son valores irreducibles. Esto, pues Haskell evalúa las funciones de arriba hacia abajo, por lo que con el orden descrito, los casos más específicos (como operaciones entre valores) se aplican antes que los casos más generales, respetando así la semántica de paso pequeño que se tiene.
+
+Para aquellas reglas que tienen una subexpresión que se reduce en las premisas, $\langle e, \varepsilon \rangle \to \langle e', \varepsilon \rangle$; se realiza \texttt{let (e', env') = smallStep (e, env)}. Esto, debido a que, aplicar \texttt{smallStep} a la subexpresión ``e'' con el mismo ambiente de la expresión original, realiza la reducción en un paso de ``e'', pues \texttt{smallStep} implementa las reglas de transición de paso pequeño. Aquello, genera una expresión ``e''' que ``toma el lugar'' de la subexpresión ``e'' en la expresión original (parte \texttt{in \ldots} de estas reglas).
+
+\paragraph{Porción de código:}
+
+\begin{verbatim}
+smallStep :: Config -> Config
+smallStep ((Num n), env) = ((Num n), env)
+smallStep ((Boolean b), env) = ((Boolean b), env)
+smallStep ((Add (Num n) (Num m)), env) = (Num (n + m), env)
+smallStep ((Add (Num n) e2), env) =
+    let (e2', env') = smallStep (e2, env)
+    in (Add (Num n) e2', env)
+smallStep ((Add e1 e2), env) =
+    let (e1', env') = smallStep (e1, env)
+    in (Add e1' e2, env)
+\end{verbatim}
+
+
+
+
+
+\subsection*{Casos a considerar de smallStep}
+
+\paragraph{Caso smallStep ((Id x), env):}
+Se define \texttt{v} como el resultado de buscar el valor del String \texttt{x} en el ambiente \texttt{env}, usando \texttt{lookupHit x env}, valor que se regresa en la configuración \texttt{(returnASA(v), env)}. Esto, es justo lo que se define en la semántica de la regla Lookup-Hit, pues \texttt{lookupHit} devuelve el valor en ASAV de un identificador en un ambiente y al regresar la configuración \texttt{(returnASA(v), env)}, el valor ASAV se devuelve en una configuración ya en su forma de ASA y con el mismo ambiente que tenía.
+
+Ahora, en caso de que \texttt{lookupHit x env} regrese \texttt{Error(msg)}, la función \texttt{returnASA(v)} se encarga de traducirlo a un error msg de Haskell que interrumpe la ejecución del programa.
+
+\paragraph{Caso de smallStep ((Fun p c), env):}
+\texttt{((Fun p c), env)}: No se reduce a closure para que la implementación se siga manteniendo de ASA a ASA. Sin embargo, esto no afecta la semántica del lenguaje, debido a que cuando se realizan las reglas de \texttt{smallStep} de App, sí se trata \texttt{(Fun p c)} con Closure.
+
+\paragraph{Caso smallStep ((App (Fun p c) e2), env):}
+\texttt{= doclosure (appArg (funToClosure ((App (Fun p c) e2), env)))}: Aquí primero, \texttt{funToClosure} se encarga de aplicar la regla de paso pequeño ``Lam-Clos'' a \texttt{((App (Fun p c) e2), env)}, que deriva en un paso a \texttt{((AppV (Closure p c env)) a, env)}. Esto, respeta la semántica de paso pequeño. Luego, \texttt{appArg} aplicado al resultado anterior, es decir \texttt{((AppV (Closure p c env0) a), env)}; usando eval reduce con paso chico a \texttt{a} a un valor canónico con la regla ``App-Arg'', lo que genera \texttt{((Appv (Closure p c envθ) a´), env)}, respetando la semántica descrita. Finalmente, \texttt{doclosure} aplicado a \texttt{((Appv (Closure p c envθ) a), env)}, ya con ``a'' un valor canónico; da un paso con la regla ``App-βv'', generando \texttt{(c, (p, toASAV(a)):envθ)}, que respeta la semántica descrita y es lo que devuelve \texttt{smallStep}.
+
+Se tiene esta forma de aplicar \texttt{smallStep} debido a que en la implementación, dicha función va de ASA a ASA y Closure no forma parte de ASA según la sintaxis abstracta descrita. Aún así, como se explicó, respeta la semántica de paso pequeño.
+
+\section*{Conclusiones}
+
+\subsection*{Reflexión crítica sobre el proceso de diseño e implementación}
+
+Optamos por una arquitectura modular (léxico → parser/SASA → desazúcar → ASA → intérprete small-step), lo que nos permitió separar claramente la teoría de la implementación. La desazucarización reduce la superficie del lenguaje a un núcleo pequeño (If, λ/App, aritmética, comparadores, pares), facilitando que las reglas small-step sean deterministas con evaluación CBV izquierda → derecha. En el código, esa visión se refleja en funciones concretas: la traducción de let/let*/letrec a λ/App (con fix para recursión), cond a If, y la currificación de lambdas con múltiples parámetros para conservar reglas de aplicación unarias. Este alineamiento teoría-código simplificó pruebas y depuración, y ayudó a mantener consistencia entre lo especificado en el reporte y lo ejecutado por el intérprete.
+
+\subsection*{Limitaciones encontradas}
+
+Ambientes y closures costaron trabajo al principio. Tuvimos idas y vueltas con la notación (ASA vs ASAV y el sufijo V). A ratos mezclamos ``expresión'' con ``valor'' y eso se notó en reglas como (App-βv) y en los errores de lookup. La corrección fue estandarizar: los valores canónicos son NumV/BooleanV/PairV/Closure, y el cuerpo del closure es ASA (no un valor), más el ambiente léxico capturado.
+
+CBV izquierda → derecha en patrones de congruencia. Nos pasó que algunas reglas reducían ``de más'' o ``en orden distinto'', por eso aparecían ``variables libres'' o resultados raros. Se arregló dejando claro el orden: primero función, luego argumento; sólo disparamos βv cuando ambos son valor.
+
+Proyecciones y errores de tipo. Al principio usábamos condiciones informales (``no es par'') y no siempre quedaba claro. Terminamos con side-conditions explícitas tipo: ``si $v \in \{\mathrm{PairV}(v_1,v_2) \mid v_1,v_2 \in V\}$, entonces error'', eso ayudó a mantener determinismo.
+
+Azúcar sintáctica (let/let* y cond). El desugar nos generó fricción:
+
+\begin{itemize}
+    \item \texttt{let/let*} debían traducirse a lambdas unarias (currificadas), respetando CBV (izq→der). Al principio se nos colaba aridad múltiple y rompía el intérprete.
+    \item \texttt{cond} → anidación de if con corto-circuito; la última rama como Bool(True) para no inventar semántica nueva.
+\end{itemize}
+
+Listas y utilitarios. Aparecieron fallos puntuales en head/tail, sqrt y \texttt{expt} cuando no elevábamos literales a valores o cuando la regla base no checaba dominio (p.ej., sqrt con $n<0$).
+
+Pruebas y ejemplos límite. Casos con let anidado, lambdas currificadas y pares dentro de fst/snd mostraron huecos que no se ven con ejemplos cortitos. Hasta que no metimos esos tests, algunos bugs seguían escondidos.
+
+\subsection*{Posibles extensiones futuras del lenguaje}
+
+\textbf{Operadores numéricos completos con chequeos de dominio.}\\
+Ya tenemos aritmética básica; conviene cerrar bien Div (error si dividimos entre 0), Sqrt (error si $n<0$) y Expt (acotar enteros y casos negativos). Todo con reglas base alineadas a NumV.
+
+\textbf{Modo ``traza'' del intérprete.}\\
+Una bandera para imprimir $\langle e, \varepsilon \rangle \rightarrow \langle e', \varepsilon' \rangle$ en cada paso. Útil para tareas y para explicar CBV en clase.
+
+\textbf{Extensiones de funciones de orden superior.}\\
+Con cierres ya funcionando, es natural sumar compose, curry/uncurry, y utilitarios para trabajar con funciones como datos (sin cambiar el núcleo, sólo como biblioteca).
+
+\textbf{Errores semánticos uniformes.}\\
+Centralizar mensajes/razones de error (ejemplo: TypeErr: expected PairV, DivByZero, UnboundId x). Eso ayuda a depurar y a pasar pruebas automáticas.
+
+
+
+
+
+\paragraph{Menú Interactivo}
+
+Para realizar nuestro menú interactivo tuvimos que importar los identificadores hFlush y stdout del módulo System.IO, donde el primero te permite generar una salida en consola y el segundo te permite forzar la salida pendiente en el búfer para que se escriba inmediatamente en el dispositivo asociado.
+
+Posteriormente generamos una variable en donde evaluamos nuestros módulos en cadena hasta que nos quede un ASA desazucarizado. Creamos un menú característico y en honor a haskell y sus siglas ghc (Glasgow Haskell Compiler), decidimos ponerle a nuestro intérprete UNAM MiniLisp Compiler o UMCi, donde la i representa que es un intérprete.
+
+Agregamos un manejador de excepciones para detectar los errores que nos envíen. 
+
+
+
+\subsection*{Bibliografía (formato IEEE)}
+
+\begin{itemize}
+    \item[\textbf{[1]}] Pierce, B. C. (2002). \textit{Types and programming languages}. MIT Press.
+
+    \item[\textbf{[2]}] Hopcroft, J. E., Motwani, R., \& Ullman, J. D. (2006). \textit{Introduction to automata theory, languages, and computation} (3rd ed.). Pearson.
+
+    \item[\textbf{[3]}] Aho, A. V., Lam, M. S., Sethi, R., \& Ullman, J. D. (2006). \textit{Compilers: Principles, techniques, and tools} (2nd ed.). Pearson Education.
+
+    \item[\textbf{[4]}] Erick Daniel Arroyo Martínez. \textit{Cálculo de Compiladores Correctos: Del Régimen Estricto al Perezoso}. Tesis de licenciatura en ciencias de la computación, Facultad de Ciencias, Universidad Nacional Autónoma de México, Ciudad Universitaria, CDMX, México, 2025. Tutor: M.C.I.C. Manuel Soto Romero.
+
+    \item[\textbf{[5]}] Simon Marlow and the Alex developers. \textit{Alex: A tool for generating lexical analysers in Haskell}. 2022. URL: \url{https://haskell-alex.readthedocs.io/}. Accedido: 2025-09-30.
+
+    \item[\textbf{[6]}] Simon Marlow and the Happy developers. \textit{Happy: A parser generator for Haskell}. 2022. URL: \url{https://haskell-happy.readthedocs.io/}. Accedido: 2025-09-30.
+
+    \item[\textbf{[7]}] M. Soto Romero, \textit{Sintaxis Abstracta}, Facultad de Ciencias UNAM, 2025. Retrieved from \url{https://lambdasspace.github.io/LDP/notas/ldp_n05.pdf}
+
+    \item[\textbf{[8]}] Graham Hutton. \textit{Programming in Haskell}. Cambridge University Press, Cambridge, UK, 2nd edition, 2016.
+
+    \item[\textbf{[9]}] Lipovača, M. (2011). \textit{Learn you a Haskell for great good!} Retrieved from \url{https://learnyouahaskell.github.io/starting-out.html}
+
+    \item[\textbf{[10]}] E. V. Gurovich, \textit{Introducción a Autómatas y Lenguajes Formales}, 2ª ed. México: Universidad Nacional Autónoma de México, Facultad de Ciencias, 2015, pp. 90, 201.
+
+    \item[\textbf{[11]}] M. Soto Romero, \textit{Sintaxis Concreta}, Facultad de Ciencias UNAM, 2025. Retrieved from \url{https://lambdasspace.github.io/LDP/notas/ldp_n04.pdf}
+
+    \item[\textbf{[12]}] M. Gabbrielli and S. Martini, \textit{Programming Languages: Principles and Paradigms}, Springer, 2023.
+
+    \item[\textbf{[13]}] S. Krishnamurthi, \textit{Programming Languages: Application and Interpretation}, 2017.
+
+    \item[\textbf{[14]}] M. Soto Romero, \textit{Semántica Dinámica}, Facultad de Ciencias UNAM, 2025. Retrieved from \url{https://lambdasspace.github.io/LDP/notas/ldp_n06.pdf}
+
+    \item[\textbf{[15]}] M. Soto Romero, \textit{Máquinas Abstractas}, Facultad de Ciencias UNAM, 2025. Retrieved from \url{https://lambdasspace.github.io/LDP/notas/ldp_n06.pdf}
+
+    \item[\textbf{[16]}] M. Soto Romero, \textit{Ambientes de Evaluación}, Facultad de Ciencias UNAM, 2025. Retrieved from \url{https://lambdasspace.github.io/LDP/notas/ldp_n06.pdf}
+
+    \item[\textbf{[17]}] M. Soto Romero, D. Méndez Medina, J. A. Pérez Márquez, E. D. Arroyo Martínez, y M. E. Chávez Zamora, \textit{Proyecto 1: MiniLisp}, Facultad de Ciencias, UNAM, 2025.
+\end{itemize}
+
+
+
+
+\end{document}
